@@ -5,7 +5,7 @@
  *              SQL object type hierarchy.
  * @module bot_agent
  * @dependencies cb_chatbots, cb_chatbot_conversations, APEX_DEBUG,
- *               DBMS_LOB, DBMS_UTILITY, bot_agent_util, bot_rag,
+ *               DBMS_LOB, DBMS_UTILITY, bot_agent_util, bot_memory,
  *               bot_tool_runner, bot_provider_t, bot_openai_provider_t,
  *               bot_claude_provider_t, JSON_OBJECT_T, JSON_ARRAY_T
  * @notes Migration-safe database object. Does not depend on legacy helper objects.
@@ -113,11 +113,11 @@ create or replace package body bot_agent as
 
    /**
     * @function get_system_context
-    * @description Combines the bot prompt, current summary, and relevant older messages.
+    * @description Combines the bot prompt, current summary, and recalled older messages.
     */
    function get_system_context (
       p_bot_id            in number,
-      p_relevant_messages in clob
+      p_recalled_messages in clob
    ) return clob is
       l_prompt          cb_chatbots.prompt%type;
       l_current_summary cb_chatbots.current_summary%type;
@@ -140,8 +140,8 @@ create or replace package body bot_agent as
 
       append_context_section(
          p_context => l_system_context,
-         p_title   => 'Relevant earlier messages',
-         p_value   => p_relevant_messages
+         p_title   => 'Recalled conversation memory',
+         p_value   => p_recalled_messages
       );
 
       return l_system_context;
@@ -154,20 +154,20 @@ create or replace package body bot_agent as
    end get_system_context;
 
    /**
-    * @function get_current_message_vector
-    * @description Loads the already-saved current user message vector for RAG.
+    * @function get_current_message_embedding
+    * @description Loads the already-saved current user message embedding for memory recall.
     */
-   function get_current_message_vector (
+   function get_current_message_embedding (
       p_bot_id             in number,
       p_current_message_id in number
-   ) return cb_chatbot_conversations.message_vector%type is
-      l_user_message   cb_chatbot_conversations.message%type;
-      l_message_vector cb_chatbot_conversations.message_vector%type;
+   ) return cb_chatbot_conversations.message_embedding%type is
+      l_user_message      cb_chatbot_conversations.message%type;
+      l_message_embedding cb_chatbot_conversations.message_embedding%type;
    begin
       select message,
-             message_vector
+             message_embedding
         into l_user_message,
-             l_message_vector
+             l_message_embedding
         from cb_chatbot_conversations
        where id = p_current_message_id
          and chatbot_id = p_bot_id;
@@ -179,14 +179,14 @@ create or replace package body bot_agent as
          );
       end if;
 
-      return l_message_vector;
+      return l_message_embedding;
    exception
       when no_data_found then
          raise_application_error(
             -20001,
             'Current chatbot message not found: ' || p_current_message_id
          );
-   end get_current_message_vector;
+   end get_current_message_embedding;
 
    /**
     * @function get_current_message_text
@@ -633,24 +633,24 @@ create or replace package body bot_agent as
     * @description Builds app context, dispatches through a provider object, and returns text.
     */
    function get_text_response (
-      p_signature_type    in varchar2,
-      p_url               in varchar2,
-      p_api_key           in varchar2,
-      p_model             in varchar2,
-      p_bot_id            in number,
-      p_current_message_id in number,
-      p_rag_message_count in number default 10,
-      p_max_tokens        in number default null,
-      p_max_tool_steps    in number default gc_max_tool_steps
+      p_signature_type       in varchar2,
+      p_url                  in varchar2,
+      p_api_key              in varchar2,
+      p_model                in varchar2,
+      p_bot_id               in number,
+      p_current_message_id   in number,
+      p_recall_message_count in number default 10,
+      p_max_tokens           in number default null,
+      p_max_tool_steps       in number default gc_max_tool_steps
    ) return clob is
-      l_signature_type   varchar2(30);
-      l_max_tokens       number;
-      l_system_prompt    clob;
-      l_history_messages clob;
-      l_relevant_messages clob;
-      l_message_vector    cb_chatbot_conversations.message_vector%type;
+      l_signature_type    varchar2(30);
+      l_max_tokens        number;
+      l_system_prompt     clob;
+      l_history_messages  clob;
+      l_recalled_messages clob;
+      l_message_embedding cb_chatbot_conversations.message_embedding%type;
       l_current_message   cb_chatbot_conversations.message%type;
-      l_provider         bot_provider_t;
+      l_provider          bot_provider_t;
    begin
       l_signature_type := normalize_signature_type(p_signature_type);
       l_max_tokens := nvl(p_max_tokens, default_max_tokens(l_signature_type));
@@ -659,20 +659,20 @@ create or replace package body bot_agent as
       apex_debug.message('bot_agent.get_text_response model: ' || p_model);
       apex_debug.message('bot_agent.get_text_response bot: ' || p_bot_id);
 
-      l_message_vector := get_current_message_vector(
+      l_message_embedding := get_current_message_embedding(
          p_bot_id             => p_bot_id,
          p_current_message_id => p_current_message_id
       );
 
-      l_relevant_messages := bot_rag.get_relevant_messages(
-         p_bot_id       => p_bot_id,
-         p_query_vector => l_message_vector,
-         p_max_messages => p_rag_message_count
+      l_recalled_messages := bot_memory.get_recalled_messages(
+         p_bot_id          => p_bot_id,
+         p_query_embedding => l_message_embedding,
+         p_max_messages    => p_recall_message_count
       );
 
       l_system_prompt := get_system_context(
          p_bot_id            => p_bot_id,
-         p_relevant_messages => l_relevant_messages
+         p_recalled_messages => l_recalled_messages
       );
 
       l_history_messages := get_conversation_messages(

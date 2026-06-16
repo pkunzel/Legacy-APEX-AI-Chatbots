@@ -2,13 +2,14 @@
  * @file bot_tool_runner.sql
  * @description Tool registry and execution facade for optional agent behavior.
  * @module bot_tool_runner
- * @dependencies cb_tools, cb_chatbot_tools, bot_rag, APEX_DEBUG
- * @notes Tools are reusable definitions. Chatbots opt into tools through
- *        CB_CHATBOT_TOOLS. The first POC executor supports contextual memory
+ * @dependencies cb_tools, bot_memory, APEX_DEBUG
+ * @notes Tool definitions belong directly to one chatbot through CB_TOOLS.CHATBOT_ID.
+ *        Create a separate tool row when another chatbot needs similar behavior.
+ *        The first POC executor supports agent-invoked conversation memory
  *        lookup over summarized conversation rows.
  */
 create or replace package bot_tool_runner as
-   gc_tool_type_contextual_memory constant varchar2(50) := 'CONTEXTUAL_MEMORY';
+   gc_tool_type_conversation_memory constant varchar2(50) := 'CONVERSATION_MEMORY';
 
    /**
     * @function has_enabled_tools_yn
@@ -47,4 +48,3 @@ create or replace package bot_tool_runner as
 
 end bot_tool_runner;
 /
-

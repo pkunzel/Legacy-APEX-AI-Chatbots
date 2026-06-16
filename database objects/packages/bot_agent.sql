@@ -4,7 +4,7 @@
  *              polymorphic provider object hierarchy.
  * @module bot_agent
  * @dependencies cb_chatbots, cb_chatbot_conversations, APEX_DEBUG,
- *               bot_agent_util, bot_rag, bot_tool_runner, bot_provider_t,
+ *               bot_agent_util, bot_memory, bot_tool_runner, bot_provider_t,
  *               bot_openai_provider_t, bot_claude_provider_t
  * @notes Migration-safe database object. Does not depend on legacy helper objects.
  *        Model, endpoint URL, and API key are caller-supplied by design; do not
@@ -32,21 +32,21 @@ create or replace package bot_agent as
     * @param p_model Provider model identifier.
     * @param p_bot_id Chatbot identifier from cb_chatbots.
     * @param p_current_message_id Current saved user-message row from cb_chatbot_conversations.
-    * @param p_rag_message_count Number of older summarized messages to retrieve by vector search.
+    * @param p_recall_message_count Number of older summarized messages to recall through conversation memory.
     * @param p_max_tokens Optional maximum response tokens. Defaults by signature type.
     * @param p_max_tool_steps Maximum tool calls allowed when the bot has tools.
     * @returns CLOB containing assistant text or provider response parse diagnostics.
     */
    function get_text_response (
-      p_signature_type    in varchar2,
-      p_url               in varchar2,
-      p_api_key           in varchar2,
-      p_model             in varchar2,
-      p_bot_id            in number,
-      p_current_message_id in number,
-      p_rag_message_count in number default 10,
-      p_max_tokens        in number default null,
-      p_max_tool_steps    in number default gc_max_tool_steps
+      p_signature_type       in varchar2,
+      p_url                  in varchar2,
+      p_api_key              in varchar2,
+      p_model                in varchar2,
+      p_bot_id               in number,
+      p_current_message_id   in number,
+      p_recall_message_count in number default 10,
+      p_max_tokens           in number default null,
+      p_max_tool_steps       in number default gc_max_tool_steps
    ) return clob;
 
    /**

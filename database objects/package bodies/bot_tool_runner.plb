@@ -2,7 +2,7 @@
  * @file bot_tool_runner.plb
  * @description Tool registry and execution facade for optional agent behavior.
  * @module bot_tool_runner
- * @dependencies cb_tools, cb_chatbot_tools, bot_rag, APEX_DEBUG,
+ * @dependencies cb_tools, bot_memory, APEX_DEBUG,
  *               DBMS_LOB, DBMS_UTILITY, JSON_OBJECT_T
  */
 create or replace package body bot_tool_runner as
@@ -105,19 +105,19 @@ create or replace package body bot_tool_runner as
    end limit_result;
 
    /**
-    * @function execute_contextual_memory
+    * @function execute_conversation_memory
     * @description Searches summarized conversation rows with a tool-selected query.
     */
-   function execute_contextual_memory (
+   function execute_conversation_memory (
       p_bot_id           in number,
       p_arguments        in clob,
       p_default_query    in varchar2,
       p_max_messages     in number,
       p_max_result_chars in number
    ) return clob is
-      l_query        varchar2(4000);
-      l_query_vector vector;
-      l_result       clob;
+      l_query           varchar2(4000);
+      l_query_embedding vector;
+      l_result          clob;
    begin
       l_query := get_argument_value(
          p_arguments => p_arguments,
@@ -137,25 +137,25 @@ create or replace package body bot_tool_runner as
 
       if l_query is null
       or not regexp_like(l_query, '[^[:space:]]') then
-         raise_application_error(-20001, 'Contextual memory query cannot be blank');
+         raise_application_error(-20001, 'Conversation memory query cannot be blank');
       end if;
 
-      l_query_vector := bot_rag.embed_message(l_query);
-      l_result := bot_rag.get_relevant_messages(
-         p_bot_id       => p_bot_id,
-         p_query_vector => l_query_vector,
-         p_max_messages => p_max_messages
+      l_query_embedding := bot_memory.embed_message(l_query);
+      l_result := bot_memory.get_recalled_messages(
+         p_bot_id          => p_bot_id,
+         p_query_embedding => l_query_embedding,
+         p_max_messages    => p_max_messages
       );
 
       if l_result is null then
-         return 'No contextual memories were found for the requested query.';
+         return 'No conversation memories were found for the requested query.';
       end if;
 
       return limit_result(
          p_value     => l_result,
          p_max_chars => p_max_result_chars
       );
-   end execute_contextual_memory;
+   end execute_conversation_memory;
 
    /**
     * @function has_enabled_tools_yn
@@ -172,11 +172,8 @@ create or replace package body bot_tool_runner as
 
       select count(*)
         into l_count
-        from cb_chatbot_tools bt
-        join cb_tools t
-          on t.id = bt.tool_id
-       where bt.chatbot_id = p_bot_id
-         and bt.enabled_yn = 'Y'
+        from cb_tools t
+       where t.chatbot_id = p_bot_id
          and t.enabled_yn = 'Y';
 
       if l_count > 0 then
@@ -209,11 +206,8 @@ create or replace package body bot_tool_runner as
       for rec in (
          select t.tool_name,
                 t.description
-           from cb_chatbot_tools bt
-           join cb_tools t
-             on t.id = bt.tool_id
-          where bt.chatbot_id = p_bot_id
-            and bt.enabled_yn = 'Y'
+           from cb_tools t
+          where t.chatbot_id = p_bot_id
             and t.enabled_yn = 'Y'
           order by t.tool_name
       )
@@ -263,11 +257,8 @@ create or replace package body bot_tool_runner as
            into l_tool_type,
                 l_max_rows,
                 l_max_result_chars
-           from cb_chatbot_tools bt
-           join cb_tools t
-             on t.id = bt.tool_id
-          where bt.chatbot_id = p_bot_id
-            and bt.enabled_yn = 'Y'
+           from cb_tools t
+          where t.chatbot_id = p_bot_id
             and t.enabled_yn = 'Y'
             and lower(trim(t.tool_name)) = l_tool_name;
       exception
@@ -288,8 +279,8 @@ create or replace package body bot_tool_runner as
          || l_tool_type
       );
 
-      if upper(l_tool_type) = gc_tool_type_contextual_memory then
-         return execute_contextual_memory(
+      if upper(l_tool_type) = gc_tool_type_conversation_memory then
+         return execute_conversation_memory(
             p_bot_id           => p_bot_id,
             p_arguments        => p_arguments,
             p_default_query    => p_default_query,

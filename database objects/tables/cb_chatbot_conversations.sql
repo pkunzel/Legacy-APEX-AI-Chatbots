@@ -8,8 +8,8 @@ create table "CB_CHATBOT_CONVERSATIONS" (
    ,"DISPLAY" 'Role' ),
    "MESSAGE"         varchar2(4000 char)
       annotations ( "DESCRIPTION" 'Message text stored for the conversation.',"DISPLAY" 'Message' ),
-   "MESSAGE_VECTOR"  vector
-      annotations ( "DESCRIPTION" 'Vector embedding associated with the message.',"DISPLAY" 'Message Vector' ),
+   "MESSAGE_EMBEDDING" vector
+      annotations ( "DESCRIPTION" 'Embedding associated with the message for conversation memory recall.',"DISPLAY" 'Message Embedding' ),
    "IS_SUMMARIZED"   varchar2(1 char) default on null 'N' not null enable annotations ( "DESCRIPTION" 'Indicates whether this message has been included in the chatbot running summary.'
    ,"DISPLAY" 'Is Summarized' ),
    "SUMMARIZED_DATE" date
