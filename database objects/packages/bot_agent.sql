@@ -3,13 +3,11 @@
  * @description Public facade package for routing chatbot requests through a
  *              polymorphic provider object hierarchy.
  * @module bot_agent
- * @dependencies cb_chatbots, cb_chatbot_conversations, APEX_DEBUG,
+ * @dependencies cb_ai_models, cb_chatbots, cb_chatbot_conversations, APEX_DEBUG,
  *               bot_agent_util, bot_memory, bot_tool_runner, bot_provider_t,
  *               bot_openai_provider_t, bot_claude_provider_t
- * @notes Migration-safe database object. Does not depend on legacy helper objects.
- *        Model, endpoint URL, and API key are caller-supplied by design; do not
- *        query a model registry table here so credentials can later move behind
- *        a secure provider.
+ * @notes Migration-safe database object. Supports caller-supplied provider
+ *        parameters and model-table lookup through CB_AI_MODELS.
  */
 create or replace package bot_agent as
    -- Signature families and caller-friendly aliases supported by the gateway.
@@ -50,6 +48,27 @@ create or replace package bot_agent as
    ) return clob;
 
    /**
+    * @function get_text_response
+    * @description Loads provider details from cb_ai_models, then delegates to
+    *              the provider-neutral text response flow.
+    * @param p_model_id AI model configuration ID from cb_ai_models.
+    * @param p_bot_id Chatbot identifier from cb_chatbots.
+    * @param p_current_message_id Current saved user-message row from cb_chatbot_conversations.
+    * @param p_recall_message_count Number of older summarized messages to recall through conversation memory.
+    * @param p_max_tokens Optional maximum response tokens. Overrides cb_ai_models.max_tokens when provided.
+    * @param p_max_tool_steps Maximum tool calls allowed when the bot has tools.
+    * @returns CLOB containing assistant text or provider response parse diagnostics.
+    */
+   function get_text_response (
+      p_model_id             in number,
+      p_bot_id               in number,
+      p_current_message_id   in number,
+      p_recall_message_count in number default 10,
+      p_max_tokens           in number default null,
+      p_max_tool_steps       in number default gc_max_tool_steps
+   ) return clob;
+
+   /**
     * @function create_summary
     * @description Summarizes older unsummarized conversation rows, appends the
     *              raw model summary to cb_chatbots.current_summary, and marks
@@ -68,6 +87,24 @@ create or replace package bot_agent as
       p_url                        in varchar2,
       p_api_key                    in varchar2,
       p_model                      in varchar2,
+      p_bot_id                     in number,
+      p_keep_latest_message_count  in number default 10,
+      p_max_tokens                 in number default null
+   ) return clob;
+
+   /**
+    * @function create_summary
+    * @description Loads provider details from cb_ai_models, summarizes older
+    *              conversation rows, appends the raw model summary, and marks
+    *              summarized rows as summarized.
+    * @param p_model_id AI model configuration ID from cb_ai_models.
+    * @param p_bot_id Chatbot identifier from cb_chatbots.
+    * @param p_keep_latest_message_count Number of latest unsummarized rows to keep live.
+    * @param p_max_tokens Optional maximum response tokens. Overrides cb_ai_models.max_tokens when provided.
+    * @returns CLOB containing the new raw summary text, or null when nothing is eligible.
+    */
+   function create_summary (
+      p_model_id                   in number,
       p_bot_id                     in number,
       p_keep_latest_message_count  in number default 10,
       p_max_tokens                 in number default null

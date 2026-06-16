@@ -4,7 +4,7 @@ create table "CB_TOOLS" (
    ,"DISPLAY" 'ID',"PRIMARYKEY" ),
    "CHATBOT_ID"       number not null enable annotations ( "DESCRIPTION" 'Chatbot that owns this tool.'
    ,"DISPLAY" 'Chatbot ID',"FOREIGNKEY" ),
-   "TOOL_NAME"        varchar2(150 char) not null enable annotations ( "DESCRIPTION" 'Stable tool name exposed to the LLM within this chatbot, such as contextual_memory.'
+   "TOOL_NAME"        varchar2(150 char) not null enable annotations ( "DESCRIPTION" 'Stable tool name exposed to the LLM within this chatbot, such as conversation_memory.'
    ,"DISPLAY" 'Tool Name' ),
    "DESCRIPTION"      clob not null enable
       annotations ( "DESCRIPTION" 'LLM-facing description of when and how to use this tool.',"DISPLAY" 'Description' ),

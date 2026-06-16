@@ -4,16 +4,22 @@
  *              one app-facing API while delegating provider selection to a true
  *              SQL object type hierarchy.
  * @module bot_agent
- * @dependencies cb_chatbots, cb_chatbot_conversations, APEX_DEBUG,
+ * @dependencies cb_ai_models, cb_chatbots, cb_chatbot_conversations, APEX_DEBUG,
  *               DBMS_LOB, DBMS_UTILITY, bot_agent_util, bot_memory,
  *               bot_tool_runner, bot_provider_t, bot_openai_provider_t,
  *               bot_claude_provider_t, JSON_OBJECT_T, JSON_ARRAY_T
- * @notes Migration-safe database object. Does not depend on legacy helper objects.
- *        Model, endpoint URL, and API key are caller-supplied by design; do not
- *        query a model registry table here so credentials can later move behind
- *        a secure provider.
+ * @notes Migration-safe database object. Supports caller-supplied provider
+ *        parameters and model-table lookup through CB_AI_MODELS.
  */
 create or replace package body bot_agent as
+
+   type t_ai_model_config is record (
+      signature_type cb_ai_models.signature_type%type,
+      url            cb_ai_models.url%type,
+      api_key        cb_ai_models.api_key%type,
+      model          cb_ai_models.model%type,
+      max_tokens     cb_ai_models.max_tokens%type
+   );
 
    /**
     * @function normalize_signature_type
@@ -56,6 +62,61 @@ create or replace package body bot_agent as
 
       return gc_openai_max_tokens;
    end default_max_tokens;
+
+   /**
+    * @function get_header_api_key
+    * @description Converts a stored raw secret into the header value expected by the adapter.
+    */
+   function get_header_api_key (
+      p_signature_type in varchar2,
+      p_api_key        in varchar2
+   ) return varchar2 is
+      l_api_key varchar2(4000);
+   begin
+      l_api_key := trim(p_api_key);
+
+      if p_signature_type = gc_signature_openai then
+         if regexp_like(l_api_key, '^Bearer[[:space:]]+', 'i') then
+            return l_api_key;
+         end if;
+
+         return 'Bearer ' || l_api_key;
+      end if;
+
+      return l_api_key;
+   end get_header_api_key;
+
+   /**
+    * @function get_ai_model_config
+    * @description Loads one model connection configuration from cb_ai_models.
+    */
+   function get_ai_model_config (
+      p_model_id in number
+   ) return t_ai_model_config is
+      l_config t_ai_model_config;
+   begin
+      if p_model_id is null then
+         raise_application_error(-20001, 'AI model ID cannot be null');
+      end if;
+
+      select signature_type,
+             url,
+             api_key,
+             model,
+             max_tokens
+        into l_config.signature_type,
+             l_config.url,
+             l_config.api_key,
+             l_config.model,
+             l_config.max_tokens
+        from cb_ai_models
+       where id = p_model_id;
+
+      return l_config;
+   exception
+      when no_data_found then
+         raise_application_error(-20001, 'AI model configuration not found: ' || p_model_id);
+   end get_ai_model_config;
 
    /**
     * @function create_provider
@@ -724,6 +785,47 @@ create or replace package body bot_agent as
    end get_text_response;
 
    /**
+    * @function get_text_response
+    * @description Loads model provider details from cb_ai_models, then returns text.
+    */
+   function get_text_response (
+      p_model_id             in number,
+      p_bot_id               in number,
+      p_current_message_id   in number,
+      p_recall_message_count in number default 10,
+      p_max_tokens           in number default null,
+      p_max_tool_steps       in number default gc_max_tool_steps
+   ) return clob is
+      l_config         t_ai_model_config;
+      l_signature_type varchar2(30);
+   begin
+      l_config := get_ai_model_config(p_model_id);
+      l_signature_type := normalize_signature_type(l_config.signature_type);
+
+      return get_text_response(
+         p_signature_type       => l_signature_type,
+         p_url                  => l_config.url,
+         p_api_key              => get_header_api_key(
+                                      p_signature_type => l_signature_type,
+                                      p_api_key        => l_config.api_key
+                                   ),
+         p_model                => l_config.model,
+         p_bot_id               => p_bot_id,
+         p_current_message_id   => p_current_message_id,
+         p_recall_message_count => p_recall_message_count,
+         p_max_tokens           => nvl(p_max_tokens, l_config.max_tokens),
+         p_max_tool_steps       => p_max_tool_steps
+      );
+   exception
+      when others then
+         apex_debug.error(
+            'Unexpected error in bot_agent.get_text_response by model ID: '
+            || dbms_utility.format_error_stack
+         );
+         raise;
+   end get_text_response;
+
+   /**
     * @function create_summary
     * @description Calls an LLM to summarize older unsummarized messages, then
     *              appends the raw summary and flags included rows.
@@ -824,6 +926,43 @@ create or replace package body bot_agent as
       when others then
          apex_debug.error(
             'Unexpected error in bot_agent.create_summary: '
+            || dbms_utility.format_error_stack
+         );
+         raise;
+   end create_summary;
+
+   /**
+    * @function create_summary
+    * @description Loads model provider details from cb_ai_models, then creates a summary.
+    */
+   function create_summary (
+      p_model_id                   in number,
+      p_bot_id                     in number,
+      p_keep_latest_message_count  in number default 10,
+      p_max_tokens                 in number default null
+   ) return clob is
+      l_config         t_ai_model_config;
+      l_signature_type varchar2(30);
+   begin
+      l_config := get_ai_model_config(p_model_id);
+      l_signature_type := normalize_signature_type(l_config.signature_type);
+
+      return create_summary(
+         p_signature_type            => l_signature_type,
+         p_url                       => l_config.url,
+         p_api_key                   => get_header_api_key(
+                                           p_signature_type => l_signature_type,
+                                           p_api_key        => l_config.api_key
+                                        ),
+         p_model                     => l_config.model,
+         p_bot_id                    => p_bot_id,
+         p_keep_latest_message_count => p_keep_latest_message_count,
+         p_max_tokens                => nvl(p_max_tokens, l_config.max_tokens)
+      );
+   exception
+      when others then
+         apex_debug.error(
+            'Unexpected error in bot_agent.create_summary by model ID: '
             || dbms_utility.format_error_stack
          );
          raise;

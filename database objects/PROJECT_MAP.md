@@ -2,12 +2,12 @@
 
 ## Current Understanding
 
-This project is an Oracle Database / APEX-oriented chatbot proof of concept for one APEX application. It stores chatbot definitions, conversation messages, and optional agent tool configuration, then exposes a single facade package, `BOT_AGENT`, that routes a text request to either an OpenAI-compatible adapter or an Anthropic/Claude-compatible adapter.
+This project is an Oracle Database / APEX-oriented chatbot proof of concept for one APEX application. It stores chatbot definitions, AI model connection configurations, conversation messages, and optional agent tool configuration, then exposes a single facade package, `BOT_AGENT`, that routes a text request to either an OpenAI-compatible adapter or an Anthropic/Claude-compatible adapter.
 
 The design appears intentionally provider-neutral:
 
 1. The APEX application saves the user's question to the database before calling `BOT_AGENT`.
-2. The caller supplies provider details such as signature type, endpoint URL, API key/header value, model, and token limit.
+2. The caller either supplies a `CB_AI_MODELS` row ID or direct provider details such as signature type, endpoint URL, API key/header value, model, and token limit.
 3. `BOT_AGENT` uses the saved current user message ID to load its embedding, then retrieves unsummarized conversation history, recalled summarized messages, and the current summary.
 4. `BOT_AGENT` creates a concrete provider object type behind the abstract `BOT_PROVIDER_T` contract.
 5. The provider subtype delegates request construction, HTTP execution, and response parsing to a provider adapter package.
@@ -24,6 +24,7 @@ The design appears intentionally provider-neutral:
 | Object | File | Purpose |
 | --- | --- | --- |
 | `CB_CHATBOTS` | `tables/cb_chatbots.sql` | Stores chatbot definitions, prompts, welcome text, summary prompt, current summary, and created date. |
+| `CB_AI_MODELS` | `tables/cb_ai_models.sql` | Stores AI model connection configurations, including signature type, endpoint URL, raw API secret, provider model ID, and optional token limit. |
 | `CB_CHATBOT_CONVERSATIONS` | `tables/cb_chatbot_conversations.sql` | Stores chatbot conversation messages, message role, `VARCHAR2(4000)` message text, optional message embedding, summary status, and created date. |
 | `CB_TOOLS` | `tables/cb_tools.sql` | Stores chatbot-owned read-only agent tool definitions exposed to LLMs. |
 
@@ -42,7 +43,7 @@ The design appears intentionally provider-neutral:
 
 | Object | File | Purpose |
 | --- | --- | --- |
-| `BOT_AGENT` | `package bodies/bot_agent.plb` | Normalizes provider signatures, fetches prompt/history, creates provider subtype, dispatches chat requests, and owns summary creation updates. |
+| `BOT_AGENT` | `package bodies/bot_agent.plb` | Loads optional AI model configuration, normalizes provider signatures, fetches prompt/history, creates provider subtype, dispatches chat requests, and owns summary creation updates. |
 | `BOT_AGENT_UTIL` | `package bodies/bot_agent_util.plb` | Implements shared validation, message parsing/appending, and HTTP POST behavior. |
 | `BOT_ADAPTER_OPENAI` | `package bodies/bot_adapter_openai.plb` | Builds OpenAI-compatible chat-completion payloads and extracts assistant text. |
 | `BOT_ADAPTER_CLAUDE` | `package bodies/bot_adapter_claude.plb` | Builds Anthropic Messages API payloads and extracts assistant text. |
@@ -75,33 +76,34 @@ The design appears intentionally provider-neutral:
 Likely install order:
 
 1. `tables/cb_chatbots.sql`
-2. `tables/cb_chatbot_conversations.sql`
-3. `tables/cb_tools.sql`
-4. `types/bot_provider_t.sql`
-5. `types/bot_openai_provider_t.sql`
-6. `types/bot_claude_provider_t.sql`
-7. `packages/bot_agent_util.sql`
-8. `packages/bot_adapter_openai.sql`
-9. `packages/bot_adapter_claude.sql`
-10. `packages/bot_memory.sql`
-11. `packages/bot_tool_runner.sql`
-12. `packages/bot_agent.sql`
-13. `type bodies/bot_openai_provider_t.plb`
-14. `type bodies/bot_claude_provider_t.plb`
-15. `package bodies/bot_agent_util.plb`
-16. `package bodies/bot_adapter_openai.plb`
-17. `package bodies/bot_adapter_claude.plb`
-18. `package bodies/bot_memory.plb`
-19. `package bodies/bot_tool_runner.plb`
-20. `package bodies/bot_agent.plb`
-21. `triggers/cb_chatbot_conversations_biu.sql`
+2. `tables/cb_ai_models.sql`
+3. `tables/cb_chatbot_conversations.sql`
+4. `tables/cb_tools.sql`
+5. `types/bot_provider_t.sql`
+6. `types/bot_openai_provider_t.sql`
+7. `types/bot_claude_provider_t.sql`
+8. `packages/bot_agent_util.sql`
+9. `packages/bot_adapter_openai.sql`
+10. `packages/bot_adapter_claude.sql`
+11. `packages/bot_memory.sql`
+12. `packages/bot_tool_runner.sql`
+13. `packages/bot_agent.sql`
+14. `type bodies/bot_openai_provider_t.plb`
+15. `type bodies/bot_claude_provider_t.plb`
+16. `package bodies/bot_agent_util.plb`
+17. `package bodies/bot_adapter_openai.plb`
+18. `package bodies/bot_adapter_claude.plb`
+19. `package bodies/bot_memory.plb`
+20. `package bodies/bot_tool_runner.plb`
+21. `package bodies/bot_agent.plb`
+22. `triggers/cb_chatbot_conversations_biu.sql`
 
 ## Open Issues Spotted From The Files
 
 1. The IDE shows `database objects/README.md`, but no `README.md` currently exists on disk under `database objects`.
 2. The IDE shows a root-level `database objects/cb_chabot_conversations.sql`, but the file currently exists under `database objects/tables` with the corrected name `cb_chatbot_conversations.sql`.
 3. There is no install driver script by design right now; current priority is testing the individual packages as-is.
-4. Credentials are caller-supplied to `BOT_AGENT` for now. A secure credential store can be revisited later.
+4. AI model credentials are currently stored as raw secrets in `CB_AI_MODELS`. Encryption or an external credential store can be revisited later.
 5. `MESSAGE_EMBEDDING` is declared as flexible `vector` for the POC. It can be tightened to the exact ONNX model dimension later, especially before adding a vector index.
 
 ## Decisions From Interview Round 1
@@ -114,7 +116,7 @@ Likely install order:
 | Conversation ordering | `conversation_num` was a migration workaround and has been removed from the package API/filter. |
 | Users | Multiple users are out of scope for the POC. |
 | Providers | Most calls will go through Claude and Novita's web server. |
-| Credentials | Passed into the package for now. |
+| Credentials | `CB_AI_MODELS.API_KEY` stores the raw provider secret for now. `BOT_AGENT` formats provider-specific request headers at runtime. |
 | Embeddings | Generated by `BOT_MEMORY` through `APEX_AI.GET_VECTOR_EMBEDDINGS` and maintained by a before-row trigger. |
 | Message storage | Conversation `MESSAGE` is capped at `VARCHAR2(4000 CHAR)` for POC simplicity. |
 | Install driver | Not needed yet. |
@@ -133,7 +135,7 @@ Likely install order:
 | Summary ownership | `BOT_AGENT.create_summary` owns summary creation because it is not an in-page DML process. |
 | Summary append | Summary creation appends the raw LLM summary text to `CURRENT_SUMMARY`; no timestamp header or structured separator is added. |
 | Summary cutoff | Summary creation takes `p_keep_latest_message_count` and summarizes older unsummarized rows by `ID`, regardless of role. |
-| Summary model | Summary creation accepts provider/model parameters separately from the chat call for screen-level flexibility. |
+| Summary model | Summary creation accepts either direct provider/model parameters or a `CB_AI_MODELS` row ID for screen-level flexibility. |
 | Summary flags | Summary creation summarizes both user and assistant rows, then marks all included rows as summarized. |
 | Delete prevention | Delete prevention is not needed for the POC. |
 | Role constraint | A database role check constraint is not needed for the POC. |
@@ -157,6 +159,17 @@ Likely install order:
 | Tool limits | Tool definitions include high `MAX_ROWS` and `MAX_RESULT_CHARS` limits for future tuning. |
 | Tool logging | Use `APEX_DEBUG` only for now. Dedicated run/step tables can come later. |
 | Tool failure | Real tool execution failures raise an error so APEX can show it. |
+
+## Decisions From Interview Round 4
+
+| Topic | Decision |
+| --- | --- |
+| Model configuration | Store callable model configurations in one table, `CB_AI_MODELS`. |
+| Model row contents | Each row stores display name, signature type, endpoint URL, raw API secret, provider model ID, optional default max tokens, and created date. |
+| Provider signature validation | `CB_AI_MODELS.SIGNATURE_TYPE` is intentionally unconstrained so experimental providers can be entered; `BOT_AGENT` still validates signatures it can actually route. |
+| API key storage | Store only the raw secret. `BOT_AGENT` adds `Bearer ` for OpenAI-compatible adapter calls loaded from `CB_AI_MODELS`; Anthropic-compatible calls use the raw secret. |
+| Model selection | Model choice remains page-level/runtime. Chatbots do not store a default model ID yet. |
+| Facade API | `BOT_AGENT` keeps direct provider-parameter functions and adds `p_model_id` overloads for chat and summary. |
 
 ## Retrieval Design
 
@@ -186,7 +199,7 @@ When tools are enabled, `BOT_AGENT` adds a JSON response contract to the system 
 or:
 
 ```json
-{"type":"tool_call","tool_name":"contextual_memory","arguments":{"query":"focused search question"}}
+{"type":"tool_call","tool_name":"conversation_memory","arguments":{"query":"focused search question"}}
 ```
 
 The first implemented tool type is `CONVERSATION_MEMORY`. It embeds the model-selected `query`, searches summarized messages for the same bot through `BOT_MEMORY.GET_RECALLED_MESSAGES`, returns the result to the LLM, and lets the LLM produce the final user-facing answer. The loop can run multiple tool calls, capped by `p_max_tool_steps` with default `5`.
@@ -213,8 +226,7 @@ The summary call uses the same provider abstraction as chat. It loads `CB_CHATBO
 ### AI Provider Strategy
 
 1. Should Novita be treated as OpenAI-compatible behind `BOT_ADAPTER_OPENAI`, or should it get its own named provider adapter?
-2. Should `p_api_key` include the full header value, such as `Bearer ...`, or just the raw secret?
-3. Do you expect provider-specific options beyond model and max tokens, such as temperature, top_p, thinking mode, tools, image input, or JSON response mode?
+2. Do you expect provider-specific options beyond model and max tokens, such as temperature, top_p, thinking mode, tools, image input, or JSON response mode?
 
 ### Data And Conversation Memory
 
