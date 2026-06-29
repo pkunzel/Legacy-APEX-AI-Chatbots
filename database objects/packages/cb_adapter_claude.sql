@@ -1,23 +1,23 @@
 /**
- * @file bot_adapter_openai.sql
- * @description OpenAI-compatible provider adapter package.
- * @module bot_adapter_openai
- * @dependencies bot_agent_util, APEX_DEBUG, DBMS_LOB, DBMS_UTILITY,
- *               UTL_HTTP, JSON_OBJECT_T, JSON_ARRAY_T
+ * @file cb_adapter_claude.sql
+ * @description Anthropic/Claude-compatible provider adapter package.
+ * @module cb_adapter_claude
+ * @dependencies cb_agent_util, APEX_DEBUG, DBMS_UTILITY, UTL_HTTP,
+ *               JSON_OBJECT_T, JSON_ARRAY_T
  * @notes Adapter-only package. It receives model, endpoint, API key, prompt,
- *        history, and user input from bot_openai_provider_t; it does not query
+ *        history, and user input from cb_claude_provider_t; it does not query
  *        app tables or credential stores.
  */
-create or replace package bot_adapter_openai as
+create or replace package cb_adapter_claude as
 
    /**
     * @function get_text_response
-    * @description Builds an OpenAI-compatible payload, sends the request, and
+    * @description Builds an Anthropic-compatible payload, sends the request, and
     *              extracts assistant text from the provider response.
     * @param p_url Provider endpoint URL.
-    * @param p_api_key Authorization header value, usually Bearer plus token.
+    * @param p_api_key Anthropic API key value.
     * @param p_model Provider model identifier.
-    * @param p_system_prompt System prompt to prepend to messages.
+    * @param p_system_prompt System prompt for the Anthropic system field.
     * @param p_history_messages JSON array CLOB containing prior role/content messages.
     * @param p_user_message Optional latest user message, appended when not already present in history.
     * @param p_max_tokens Maximum response tokens.
@@ -33,5 +33,5 @@ create or replace package bot_adapter_openai as
       p_max_tokens       in number
    ) return clob;
 
-end bot_adapter_openai;
+end cb_adapter_claude;
 /

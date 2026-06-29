@@ -1,14 +1,14 @@
 /**
- * @file bot_tool_runner.sql
+ * @file cb_tool_runner.sql
  * @description Tool registry and execution facade for optional agent behavior.
- * @module bot_tool_runner
- * @dependencies cb_tools, bot_memory, APEX_DEBUG
+ * @module cb_tool_runner
+ * @dependencies cb_tools, cb_memory, APEX_DEBUG
  * @notes Tool definitions belong directly to one chatbot through CB_TOOLS.CHATBOT_ID.
  *        Create a separate tool row when another chatbot needs similar behavior.
  *        The first POC executor supports agent-invoked conversation memory
  *        lookup over summarized conversation rows.
  */
-create or replace package bot_tool_runner as
+create or replace package cb_tool_runner as
    gc_tool_type_conversation_memory constant varchar2(50) := 'CONVERSATION_MEMORY';
 
    /**
@@ -46,5 +46,5 @@ create or replace package bot_tool_runner as
       p_default_query in varchar2 default null
    ) return clob;
 
-end bot_tool_runner;
+end cb_tool_runner;
 /

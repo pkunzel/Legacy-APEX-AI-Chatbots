@@ -1,10 +1,10 @@
 /**
- * @file bot_memory.plb
+ * @file cb_memory.plb
  * @description Conversation memory package body for semantic recall of summarized messages.
- * @module bot_memory
+ * @module cb_memory
  * @dependencies APEX_AI, APEX_DEBUG, DBMS_UTILITY
  */
-create or replace package body bot_memory as
+create or replace package body cb_memory as
 
    /**
     * @function get_embedding_text
@@ -58,7 +58,7 @@ create or replace package body bot_memory as
    exception
       when others then
          apex_debug.error(
-            'Unexpected error in bot_memory.embed_message: '
+            'Unexpected error in cb_memory.embed_message: '
             || dbms_utility.format_error_stack
          );
          raise;
@@ -129,11 +129,11 @@ create or replace package body bot_memory as
    exception
       when others then
          apex_debug.error(
-            'Unexpected error in bot_memory.get_recalled_messages: '
+            'Unexpected error in cb_memory.get_recalled_messages: '
             || dbms_utility.format_error_stack
          );
          raise;
    end get_recalled_messages;
 
-end bot_memory;
+end cb_memory;
 /

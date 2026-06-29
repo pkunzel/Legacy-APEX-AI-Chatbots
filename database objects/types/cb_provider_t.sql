@@ -1,13 +1,13 @@
 /**
- * @file bot_provider_t.sql
+ * @file cb_provider_t.sql
  * @description Abstract provider contract for chatbot provider implementations.
- * @module bot_provider_t
+ * @module cb_provider_t
  * @dependencies Oracle SQL object type support
  * @notes This object type is intentionally not instantiable. Concrete provider
- *        subtypes override get_text_response so bot_agent can use true
- *        polymorphic method dispatch through a bot_provider_t variable.
+ *        subtypes override get_text_response so cb_agent can use true
+ *        polymorphic method dispatch through a cb_provider_t variable.
  */
-create or replace type bot_provider_t force as object (
+create or replace type cb_provider_t force as object (
    url        varchar2(4000),
    api_key    varchar2(4000),
    model      varchar2(150),

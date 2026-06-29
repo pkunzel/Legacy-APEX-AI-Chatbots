@@ -1,12 +1,12 @@
 /**
- * @file bot_agent_util.sql
+ * @file cb_agent_util.sql
  * @description Shared internal helpers for bot provider adapter packages.
- * @module bot_agent_util
+ * @module cb_agent_util
  * @dependencies APEX_WEB_SERVICE, APEX_DEBUG, DBMS_LOB, DBMS_UTILITY,
  *               JSON_OBJECT_T, JSON_ARRAY_T
  * @notes Utility package for provider adapters. Not intended as an app-facing API.
  */
-create or replace package bot_agent_util as
+create or replace package cb_agent_util as
 
    /**
     * @procedure validate_provider_inputs
@@ -64,5 +64,5 @@ create or replace package bot_agent_util as
       p_extra_header_02_value in varchar2 default null
    ) return clob;
 
-end bot_agent_util;
+end cb_agent_util;
 /

@@ -1,16 +1,16 @@
 /**
- * @file bot_claude_provider_t.plb
+ * @file cb_claude_provider_t.plb
  * @description Concrete Anthropic/Claude provider subtype body.
- * @module bot_claude_provider_t
- * @dependencies bot_agent, bot_adapter_claude
+ * @module cb_claude_provider_t
+ * @dependencies cb_agent, cb_adapter_claude
  * @notes Overrides the abstract provider contract and delegates the provider
- *        payload/response algorithm to bot_adapter_claude.
+ *        payload/response algorithm to cb_adapter_claude.
  */
-create or replace type body bot_claude_provider_t as
+create or replace type body cb_claude_provider_t as
 
    overriding member function get_signature_type return varchar2 is
    begin
-      return bot_agent.gc_signature_anthropic;
+      return cb_agent.gc_signature_anthropic;
    end get_signature_type;
 
    overriding member function get_provider_name return varchar2 is
@@ -24,7 +24,7 @@ create or replace type body bot_claude_provider_t as
       p_user_message     in clob
    ) return clob is
    begin
-      return bot_adapter_claude.get_text_response(
+      return cb_adapter_claude.get_text_response(
          p_url              => self.url,
          p_api_key          => self.api_key,
          p_model            => self.model,

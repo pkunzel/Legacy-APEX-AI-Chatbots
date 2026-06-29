@@ -1,12 +1,12 @@
 /**
- * @file bot_claude_provider_t.sql
+ * @file cb_claude_provider_t.sql
  * @description Concrete Anthropic/Claude provider subtype.
- * @module bot_claude_provider_t
- * @dependencies bot_provider_t
+ * @module cb_claude_provider_t
+ * @dependencies cb_provider_t
  * @notes Handles Anthropic Messages API endpoints. The caller supplies endpoint
  *        URL, API key, model, and token limit.
  */
-create or replace type bot_claude_provider_t under bot_provider_t (
+create or replace type cb_claude_provider_t under cb_provider_t (
    overriding member function get_signature_type return varchar2,
 
    overriding member function get_provider_name return varchar2,

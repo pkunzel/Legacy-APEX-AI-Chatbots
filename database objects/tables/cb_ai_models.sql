@@ -4,11 +4,11 @@ create table "CB_AI_MODELS" (
    ,"DISPLAY" 'ID',"PRIMARYKEY" ),
    "NAME"           varchar2(150 char) not null enable annotations ( "DESCRIPTION" 'Display name for selecting this model configuration in APEX.'
    ,"DISPLAY" 'Name' ),
-   "SIGNATURE_TYPE" varchar2(30 char) not null enable annotations ( "DESCRIPTION" 'Provider signature family passed to BOT_AGENT, such as OPENAI_COMPATIBLE or ANTHROPIC.'
+   "SIGNATURE_TYPE" varchar2(30 char) not null enable annotations ( "DESCRIPTION" 'Provider signature family passed to CB_AGENT, such as OPENAI_COMPATIBLE or ANTHROPIC.'
    ,"DISPLAY" 'Signature Type' ),
    "URL"            varchar2(4000 char) not null enable annotations ( "DESCRIPTION" 'Provider endpoint URL.'
    ,"DISPLAY" 'URL' ),
-   "API_KEY"        varchar2(4000 char) not null enable annotations ( "DESCRIPTION" 'Raw provider API secret. BOT_AGENT formats provider-specific request headers at runtime.'
+   "API_KEY"        varchar2(4000 char) not null enable annotations ( "DESCRIPTION" 'Raw provider API secret. CB_AGENT formats provider-specific request headers at runtime.'
    ,"DISPLAY" 'API Key' ),
    "MODEL"          varchar2(150 char) not null enable annotations ( "DESCRIPTION" 'Provider model identifier.'
    ,"DISPLAY" 'Model' ),
@@ -22,4 +22,4 @@ create table "CB_AI_MODELS" (
       using index enable,
    constraint "CB_AI_MODELS_MAX_TOKENS_CK"
       check ( max_tokens is null or max_tokens > 0 ) enable
-) annotations ( "DESCRIPTION" 'Stores AI model connection configurations used by BOT_AGENT.',"DISPLAY" 'AI Models' );
+) annotations ( "DESCRIPTION" 'Stores AI model connection configurations used by CB_AGENT.',"DISPLAY" 'AI Models' );

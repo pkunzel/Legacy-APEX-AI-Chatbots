@@ -1,12 +1,12 @@
 /**
- * @file bot_agent_util.plb
+ * @file cb_agent_util.plb
  * @description Shared internal helpers for bot provider adapter packages.
- * @module bot_agent_util
+ * @module cb_agent_util
  * @dependencies APEX_WEB_SERVICE, APEX_DEBUG, DBMS_LOB, DBMS_UTILITY,
  *               JSON_OBJECT_T, JSON_ARRAY_T
  * @notes Centralizes repeated validation, JSON message handling, and HTTP POST logic.
  */
-create or replace package body bot_agent_util as
+create or replace package body cb_agent_util as
 
    gc_content_type constant varchar2(50) := 'application/json';
 
@@ -184,7 +184,7 @@ create or replace package body bot_agent_util as
    exception
       when others then
          apex_debug.error(
-            'Error in bot_agent_util.make_api_request for '
+            'Error in cb_agent_util.make_api_request for '
             || p_provider_name
             || ': '
             || dbms_utility.format_error_stack
@@ -192,5 +192,5 @@ create or replace package body bot_agent_util as
          raise;
    end make_api_request;
 
-end bot_agent_util;
+end cb_agent_util;
 /

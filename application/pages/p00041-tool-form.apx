@@ -19,7 +19,7 @@ page 41 (
         formAutoComplete: false
     }
     help {
-        helpText: Create or update one chatbot-owned tool definition. Tool settings control what BOT_TOOL_RUNNER exposes to the model.
+        helpText: Create or update one chatbot-owned tool definition. Tool settings control what CB_TOOL_RUNNER exposes to the model.
     }
 
     region buttons (

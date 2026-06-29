@@ -77,29 +77,13 @@ list navigation-menu (
         }
     )
 
-    entry administration (
-        label: Administration
-        icon {
-            imageIconCssClasses: fa-table
-        }
-        layout {
-            sequence: 20
-        }
-        link {
-            target: {
-                page: 10
-            }
-        }
-    )
-
     entry chatbots (
         label: Chatbots
         icon {
             imageIconCssClasses: fa-comments-o
         }
         layout {
-            sequence: 10
-            parentEntry: @administration
+            sequence: 20
         }
         link {
             target: {
@@ -114,8 +98,7 @@ list navigation-menu (
             imageIconCssClasses: fa-gear
         }
         layout {
-            sequence: 20
-            parentEntry: @administration
+            sequence: 30
         }
         link {
             target: {
@@ -130,8 +113,7 @@ list navigation-menu (
             imageIconCssClasses: fa-commenting-o
         }
         layout {
-            sequence: 30
-            parentEntry: @administration
+            sequence: 40
         }
         link {
             target: {
@@ -146,8 +128,7 @@ list navigation-menu (
             imageIconCssClasses: fa-wrench
         }
         layout {
-            sequence: 40
-            parentEntry: @administration
+            sequence: 50
         }
         link {
             target: {

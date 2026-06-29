@@ -1,14 +1,14 @@
 /**
- * @file bot_memory.sql
+ * @file cb_memory.sql
  * @description Conversation memory helpers for semantic recall of summarized messages.
- * @module bot_memory
+ * @module cb_memory
  * @dependencies APEX_AI, APEX_DEBUG, DBMS_UTILITY
  * @notes Keeps embedding generation outside table triggers and outside the
  *        provider adapters. This package repairs summary degradation by
  *        recalling older summarized conversation messages when they are
  *        semantically relevant to the current turn.
  */
-create or replace package bot_memory as
+create or replace package cb_memory as
    gc_embedding_service_static_id constant varchar2(255) := 'onnx-model';
 
    /**
@@ -37,5 +37,5 @@ create or replace package bot_memory as
       p_max_messages    in number default 10
    ) return clob;
 
-end bot_memory;
+end cb_memory;
 /

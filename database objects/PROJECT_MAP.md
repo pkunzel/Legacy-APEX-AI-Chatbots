@@ -2,20 +2,20 @@
 
 ## Current Understanding
 
-This project is an Oracle Database / APEX-oriented chatbot proof of concept for one APEX application. It stores chatbot definitions, AI model connection configurations, conversation messages, and optional agent tool configuration, then exposes a single facade package, `BOT_AGENT`, that routes a text request to either an OpenAI-compatible adapter or an Anthropic/Claude-compatible adapter.
+This project is an Oracle Database / APEX-oriented chatbot proof of concept for one APEX application. It stores chatbot definitions, AI model connection configurations, conversation messages, and optional agent tool configuration, then exposes a single facade package, `CB_AGENT`, that routes a text request to either an OpenAI-compatible adapter or an Anthropic/Claude-compatible adapter.
 
 The design appears intentionally provider-neutral:
 
-1. The APEX application saves the user's question to the database before calling `BOT_AGENT`.
+1. The APEX application saves the user's question to the database before calling `CB_AGENT`.
 2. The caller either supplies a `CB_AI_MODELS` row ID or direct provider details such as signature type, endpoint URL, API key/header value, model, and token limit.
-3. `BOT_AGENT` uses the saved current user message ID to load its embedding, then retrieves unsummarized conversation history, recalled summarized messages, and the current summary.
-4. `BOT_AGENT` creates a concrete provider object type behind the abstract `BOT_PROVIDER_T` contract.
+3. `CB_AGENT` uses the saved current user message ID to load its embedding, then retrieves unsummarized conversation history, recalled summarized messages, and the current summary.
+4. `CB_AGENT` creates a concrete provider object type behind the abstract `CB_PROVIDER_T` contract.
 5. The provider subtype delegates request construction, HTTP execution, and response parsing to a provider adapter package.
-6. `BOT_AGENT` returns assistant responses for normal chat calls. The APEX application is responsible for inserting the assistant message after the call.
-7. Shared validation, JSON message handling, and HTTP POST logic live in `BOT_AGENT_UTIL`.
-8. Message embeddings are generated automatically for every message row by a conversation-table trigger that delegates to `BOT_MEMORY`.
-9. `BOT_AGENT.create_summary` is the API used by the APEX summary button. It calls the requested provider/model, appends the raw summary to `CB_CHATBOTS.CURRENT_SUMMARY`, and marks included rows summarized.
-10. Bots with no enabled tools keep the normal one-call behavior. Bots with enabled tools enter a bounded JSON tool-calling loop through `BOT_TOOL_RUNNER`.
+6. `CB_AGENT` returns assistant responses for normal chat calls. The APEX application is responsible for inserting the assistant message after the call.
+7. Shared validation, JSON message handling, and HTTP POST logic live in `CB_AGENT_UTIL`.
+8. Message embeddings are generated automatically for every message row by a conversation-table trigger that delegates to `CB_MEMORY`.
+9. `CB_AGENT.create_summary` is the API used by the APEX summary button. It calls the requested provider/model, appends the raw summary to `CB_CHATBOTS.CURRENT_SUMMARY`, and marks included rows summarized.
+10. Bots with no enabled tools keep the normal one-call behavior. Bots with enabled tools enter a bounded JSON tool-calling loop through `CB_TOOL_RUNNER`.
 
 ## Object Inventory
 
@@ -32,23 +32,23 @@ The design appears intentionally provider-neutral:
 
 | Object | File | Purpose |
 | --- | --- | --- |
-| `BOT_AGENT` | `packages/bot_agent.sql` | Public facade API for getting provider-backed text responses and creating conversation summaries. |
-| `BOT_AGENT_UTIL` | `packages/bot_agent_util.sql` | Shared validation, JSON array/message helpers, and HTTP request helper. |
-| `BOT_ADAPTER_OPENAI` | `packages/bot_adapter_openai.sql` | OpenAI-compatible payload, request, and response parsing API. |
-| `BOT_ADAPTER_CLAUDE` | `packages/bot_adapter_claude.sql` | Anthropic/Claude-compatible payload, request, and response parsing API. |
-| `BOT_MEMORY` | `packages/bot_memory.sql` | Conversation memory helper API using the APEX AI service static ID `onnx-model` to embed and recall summarized messages. |
-| `BOT_TOOL_RUNNER` | `packages/bot_tool_runner.sql` | Tool registry and execution API for optional agent behavior. |
+| `CB_AGENT` | `packages/cb_agent.sql` | Public facade API for getting provider-backed text responses and creating conversation summaries. |
+| `CB_AGENT_UTIL` | `packages/cb_agent_util.sql` | Shared validation, JSON array/message helpers, and HTTP request helper. |
+| `CB_ADAPTER_OPENAI` | `packages/cb_adapter_openai.sql` | OpenAI-compatible payload, request, and response parsing API. |
+| `CB_ADAPTER_CLAUDE` | `packages/cb_adapter_claude.sql` | Anthropic/Claude-compatible payload, request, and response parsing API. |
+| `CB_MEMORY` | `packages/cb_memory.sql` | Conversation memory helper API using the APEX AI service static ID `onnx-model` to embed and recall summarized messages. |
+| `CB_TOOL_RUNNER` | `packages/cb_tool_runner.sql` | Tool registry and execution API for optional agent behavior. |
 
 ### Package Bodies
 
 | Object | File | Purpose |
 | --- | --- | --- |
-| `BOT_AGENT` | `package bodies/bot_agent.plb` | Loads optional AI model configuration, normalizes provider signatures, fetches prompt/history, creates provider subtype, dispatches chat requests, and owns summary creation updates. |
-| `BOT_AGENT_UTIL` | `package bodies/bot_agent_util.plb` | Implements shared validation, message parsing/appending, and HTTP POST behavior. |
-| `BOT_ADAPTER_OPENAI` | `package bodies/bot_adapter_openai.plb` | Builds OpenAI-compatible chat-completion payloads and extracts assistant text. |
-| `BOT_ADAPTER_CLAUDE` | `package bodies/bot_adapter_claude.plb` | Builds Anthropic Messages API payloads and extracts assistant text. |
-| `BOT_MEMORY` | `package bodies/bot_memory.plb` | Calls `APEX_AI.GET_VECTOR_EMBEDDINGS` for nonblank message text and recalls relevant summarized messages. |
-| `BOT_TOOL_RUNNER` | `package bodies/bot_tool_runner.plb` | Checks enabled tools, emits tool instructions, and executes agent-invoked conversation memory lookups. |
+| `CB_AGENT` | `package bodies/cb_agent.plb` | Loads optional AI model configuration, normalizes provider signatures, fetches prompt/history, creates provider subtype, dispatches chat requests, and owns summary creation updates. |
+| `CB_AGENT_UTIL` | `package bodies/cb_agent_util.plb` | Implements shared validation, message parsing/appending, and HTTP POST behavior. |
+| `CB_ADAPTER_OPENAI` | `package bodies/cb_adapter_openai.plb` | Builds OpenAI-compatible chat-completion payloads and extracts assistant text. |
+| `CB_ADAPTER_CLAUDE` | `package bodies/cb_adapter_claude.plb` | Builds Anthropic Messages API payloads and extracts assistant text. |
+| `CB_MEMORY` | `package bodies/cb_memory.plb` | Calls `APEX_AI.GET_VECTOR_EMBEDDINGS` for nonblank message text and recalls relevant summarized messages. |
+| `CB_TOOL_RUNNER` | `package bodies/cb_tool_runner.plb` | Checks enabled tools, emits tool instructions, and executes agent-invoked conversation memory lookups. |
 
 ### Triggers
 
@@ -60,16 +60,16 @@ The design appears intentionally provider-neutral:
 
 | Object | File | Purpose |
 | --- | --- | --- |
-| `BOT_PROVIDER_T` | `types/bot_provider_t.sql` | Abstract provider contract with URL, API key, model, max tokens, and polymorphic text response methods. |
-| `BOT_OPENAI_PROVIDER_T` | `types/bot_openai_provider_t.sql` | Final subtype for OpenAI-compatible calls. |
-| `BOT_CLAUDE_PROVIDER_T` | `types/bot_claude_provider_t.sql` | Final subtype for Anthropic/Claude calls. |
+| `CB_PROVIDER_T` | `types/cb_provider_t.sql` | Abstract provider contract with URL, API key, model, max tokens, and polymorphic text response methods. |
+| `CB_OPENAI_PROVIDER_T` | `types/cb_openai_provider_t.sql` | Final subtype for OpenAI-compatible calls. |
+| `CB_CLAUDE_PROVIDER_T` | `types/cb_claude_provider_t.sql` | Final subtype for Anthropic/Claude calls. |
 
 ### Type Bodies
 
 | Object | File | Purpose |
 | --- | --- | --- |
-| `BOT_OPENAI_PROVIDER_T` | `type bodies/bot_openai_provider_t.plb` | Implements OpenAI provider identity and delegates text response work to `BOT_ADAPTER_OPENAI`. |
-| `BOT_CLAUDE_PROVIDER_T` | `type bodies/bot_claude_provider_t.plb` | Implements Claude provider identity and delegates text response work to `BOT_ADAPTER_CLAUDE`. |
+| `CB_OPENAI_PROVIDER_T` | `type bodies/cb_openai_provider_t.plb` | Implements OpenAI provider identity and delegates text response work to `CB_ADAPTER_OPENAI`. |
+| `CB_CLAUDE_PROVIDER_T` | `type bodies/cb_claude_provider_t.plb` | Implements Claude provider identity and delegates text response work to `CB_ADAPTER_CLAUDE`. |
 
 ## Dependency Order
 
@@ -79,23 +79,23 @@ Likely install order:
 2. `tables/cb_ai_models.sql`
 3. `tables/cb_chatbot_conversations.sql`
 4. `tables/cb_tools.sql`
-5. `types/bot_provider_t.sql`
-6. `types/bot_openai_provider_t.sql`
-7. `types/bot_claude_provider_t.sql`
-8. `packages/bot_agent_util.sql`
-9. `packages/bot_adapter_openai.sql`
-10. `packages/bot_adapter_claude.sql`
-11. `packages/bot_memory.sql`
-12. `packages/bot_tool_runner.sql`
-13. `packages/bot_agent.sql`
-14. `type bodies/bot_openai_provider_t.plb`
-15. `type bodies/bot_claude_provider_t.plb`
-16. `package bodies/bot_agent_util.plb`
-17. `package bodies/bot_adapter_openai.plb`
-18. `package bodies/bot_adapter_claude.plb`
-19. `package bodies/bot_memory.plb`
-20. `package bodies/bot_tool_runner.plb`
-21. `package bodies/bot_agent.plb`
+5. `types/cb_provider_t.sql`
+6. `types/cb_openai_provider_t.sql`
+7. `types/cb_claude_provider_t.sql`
+8. `packages/cb_agent_util.sql`
+9. `packages/cb_adapter_openai.sql`
+10. `packages/cb_adapter_claude.sql`
+11. `packages/cb_memory.sql`
+12. `packages/cb_tool_runner.sql`
+13. `packages/cb_agent.sql`
+14. `type bodies/cb_openai_provider_t.plb`
+15. `type bodies/cb_claude_provider_t.plb`
+16. `package bodies/cb_agent_util.plb`
+17. `package bodies/cb_adapter_openai.plb`
+18. `package bodies/cb_adapter_claude.plb`
+19. `package bodies/cb_memory.plb`
+20. `package bodies/cb_tool_runner.plb`
+21. `package bodies/cb_agent.plb`
 22. `triggers/cb_chatbot_conversations_biu.sql`
 
 ## Open Issues Spotted From The Files
@@ -111,13 +111,13 @@ Likely install order:
 | Topic | Decision |
 | --- | --- |
 | Scope | One chatbot proof of concept for one APEX application. |
-| Caller | An APEX process calls `BOT_AGENT` after saving the user question in the database. |
-| Chat persistence | `BOT_AGENT.get_text_response` should only return the model response. It should not insert messages. |
+| Caller | An APEX process calls `CB_AGENT` after saving the user question in the database. |
+| Chat persistence | `CB_AGENT.get_text_response` should only return the model response. It should not insert messages. |
 | Conversation ordering | `conversation_num` was a migration workaround and has been removed from the package API/filter. |
 | Users | Multiple users are out of scope for the POC. |
 | Providers | Most calls will go through Claude and Novita's web server. |
-| Credentials | `CB_AI_MODELS.API_KEY` stores the raw provider secret for now. `BOT_AGENT` formats provider-specific request headers at runtime. |
-| Embeddings | Generated by `BOT_MEMORY` through `APEX_AI.GET_VECTOR_EMBEDDINGS` and maintained by a before-row trigger. |
+| Credentials | `CB_AI_MODELS.API_KEY` stores the raw provider secret for now. `CB_AGENT` formats provider-specific request headers at runtime. |
+| Embeddings | Generated by `CB_MEMORY` through `APEX_AI.GET_VECTOR_EMBEDDINGS` and maintained by a before-row trigger. |
 | Message storage | Conversation `MESSAGE` is capped at `VARCHAR2(4000 CHAR)` for POC simplicity. |
 | Install driver | Not needed yet. |
 
@@ -125,14 +125,14 @@ Likely install order:
 
 | Topic | Decision |
 | --- | --- |
-| APEX scope | APEX owns chatbot CRUD, message CRUD, chat-page model selection, assistant-message insert after `BOT_AGENT.get_text_response`, and screen refresh. SQL exports are intentionally not kept here. |
+| APEX scope | APEX owns chatbot CRUD, message CRUD, chat-page model selection, assistant-message insert after `CB_AGENT.get_text_response`, and screen refresh. SQL exports are intentionally not kept here. |
 | Message vectorization | Every message role is vectorized, including user and assistant rows. |
 | Update behavior | Updating a message only updates its vector through the trigger. It does not call the LLM or create another assistant response. |
-| Assistant persistence | `BOT_AGENT.get_text_response` returns text only; APEX inserts the assistant message. |
+| Assistant persistence | `CB_AGENT.get_text_response` returns text only; APEX inserts the assistant message. |
 | Message pairing | `ID` order is good enough for the POC. |
 | Conversation memory input | Memory recall uses the last saved/current message embedding provided through `p_current_message_id`. |
 | Conversation memory source | Memory recall retrieves only summarized rows, while all unsummarized rows stay in the live history. |
-| Summary ownership | `BOT_AGENT.create_summary` owns summary creation because it is not an in-page DML process. |
+| Summary ownership | `CB_AGENT.create_summary` owns summary creation because it is not an in-page DML process. |
 | Summary append | Summary creation appends the raw LLM summary text to `CURRENT_SUMMARY`; no timestamp header or structured separator is added. |
 | Summary cutoff | Summary creation takes `p_keep_latest_message_count` and summarizes older unsummarized rows by `ID`, regardless of role. |
 | Summary model | Summary creation accepts either direct provider/model parameters or a `CB_AI_MODELS` row ID for screen-level flexibility. |
@@ -166,14 +166,14 @@ Likely install order:
 | --- | --- |
 | Model configuration | Store callable model configurations in one table, `CB_AI_MODELS`. |
 | Model row contents | Each row stores display name, signature type, endpoint URL, raw API secret, provider model ID, optional default max tokens, and created date. |
-| Provider signature validation | `CB_AI_MODELS.SIGNATURE_TYPE` is intentionally unconstrained so experimental providers can be entered; `BOT_AGENT` still validates signatures it can actually route. |
-| API key storage | Store only the raw secret. `BOT_AGENT` adds `Bearer ` for OpenAI-compatible adapter calls loaded from `CB_AI_MODELS`; Anthropic-compatible calls use the raw secret. |
+| Provider signature validation | `CB_AI_MODELS.SIGNATURE_TYPE` is intentionally unconstrained so experimental providers can be entered; `CB_AGENT` still validates signatures it can actually route. |
+| API key storage | Store only the raw secret. `CB_AGENT` adds `Bearer ` for OpenAI-compatible adapter calls loaded from `CB_AI_MODELS`; Anthropic-compatible calls use the raw secret. |
 | Model selection | Model choice remains page-level/runtime. Chatbots do not store a default model ID yet. |
-| Facade API | `BOT_AGENT` keeps direct provider-parameter functions and adds `p_model_id` overloads for chat and summary. |
+| Facade API | `CB_AGENT` keeps direct provider-parameter functions and adds `p_model_id` overloads for chat and summary. |
 
 ## Retrieval Design
 
-`BOT_AGENT.get_text_response` now expects the current saved user-message ID instead of the raw user text. The current user message remains part of the unsummarized transcript, and the ID is used to load its embedding for conversation memory recall.
+`CB_AGENT.get_text_response` now expects the current saved user-message ID instead of the raw user text. The current user message remains part of the unsummarized transcript, and the ID is used to load its embedding for conversation memory recall.
 
 The context sent to providers is assembled in this order:
 
@@ -182,15 +182,15 @@ The context sent to providers is assembled in this order:
 3. Recalled summarized conversation messages, when present.
 4. Unsummarized conversation rows from `CB_CHATBOT_CONVERSATIONS`, including the current user message.
 
-Because the current message is already in the unsummarized transcript, `BOT_AGENT` passes `null` for the adapter-level `p_user_message`. The adapters still support a non-null `p_user_message` for direct package tests.
+Because the current message is already in the unsummarized transcript, `CB_AGENT` passes `null` for the adapter-level `p_user_message`. The adapters still support a non-null `p_user_message` for direct package tests.
 
 Conversation memory recall candidates are summarized rows only: `IS_SUMMARIZED = 'Y'`. This keeps the main live transcript and recalled memory from duplicating each other. Both user and assistant messages are eligible for recall.
 
 ## Agent Tool Design
 
-Tool-enabled bots use the same `BOT_AGENT.get_text_response` API as no-tool bots. `BOT_AGENT` checks `BOT_TOOL_RUNNER.has_enabled_tools`; when no tools are enabled it follows the original one-call path.
+Tool-enabled bots use the same `CB_AGENT.get_text_response` API as no-tool bots. `CB_AGENT` checks `CB_TOOL_RUNNER.has_enabled_tools`; when no tools are enabled it follows the original one-call path.
 
-When tools are enabled, `BOT_AGENT` adds a JSON response contract to the system prompt. The model must return either:
+When tools are enabled, `CB_AGENT` adds a JSON response contract to the system prompt. The model must return either:
 
 ```json
 {"type":"final","message":"user-facing answer"}
@@ -202,11 +202,11 @@ or:
 {"type":"tool_call","tool_name":"conversation_memory","arguments":{"query":"focused search question"}}
 ```
 
-The first implemented tool type is `CONVERSATION_MEMORY`. It embeds the model-selected `query`, searches summarized messages for the same bot through `BOT_MEMORY.GET_RECALLED_MESSAGES`, returns the result to the LLM, and lets the LLM produce the final user-facing answer. The loop can run multiple tool calls, capped by `p_max_tool_steps` with default `5`.
+The first implemented tool type is `CONVERSATION_MEMORY`. It embeds the model-selected `query`, searches summarized messages for the same bot through `CB_MEMORY.GET_RECALLED_MESSAGES`, returns the result to the LLM, and lets the LLM produce the final user-facing answer. The loop can run multiple tool calls, capped by `p_max_tool_steps` with default `5`.
 
 ## Summary Design
 
-`BOT_AGENT.create_summary` summarizes older unsummarized rows while preserving the latest `p_keep_latest_message_count` unsummarized rows in live history. Eligibility is based on `ID` order, regardless of role.
+`CB_AGENT.create_summary` summarizes older unsummarized rows while preserving the latest `p_keep_latest_message_count` unsummarized rows in live history. Eligibility is based on `ID` order, regardless of role.
 
 The summary call uses the same provider abstraction as chat. It loads `CB_CHATBOTS.SUMMARY_PROMPT`, falls back to a default summary prompt when blank, sends the eligible transcript as a single user message, appends the raw model response to `CB_CHATBOTS.CURRENT_SUMMARY`, and sets `IS_SUMMARIZED = 'Y'` plus `SUMMARIZED_DATE = SYSDATE` for the included rows. The package does not commit, so APEX or the caller controls transaction boundaries.
 
@@ -225,7 +225,7 @@ The summary call uses the same provider abstraction as chat. It loads `CB_CHATBO
 
 ### AI Provider Strategy
 
-1. Should Novita be treated as OpenAI-compatible behind `BOT_ADAPTER_OPENAI`, or should it get its own named provider adapter?
+1. Should Novita be treated as OpenAI-compatible behind `CB_ADAPTER_OPENAI`, or should it get its own named provider adapter?
 2. Do you expect provider-specific options beyond model and max tokens, such as temperature, top_p, thinking mode, tools, image input, or JSON response mode?
 
 ### Data And Conversation Memory
@@ -250,4 +250,4 @@ The summary call uses the same provider abstraction as chat. It loads `CB_CHATBO
 
 1. Do you want quoted uppercase DDL preserved, or normalized unquoted lowercase object names in scripts?
 2. Should constraints and indexes follow a stricter naming convention?
-3. Should public facade names use `BOT_` or a more app-specific prefix like `CB_`?
+3. Public facade names now use the project-specific `CB_` prefix consistently.

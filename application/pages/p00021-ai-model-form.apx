@@ -140,7 +140,7 @@ page 21 (
         }
         help {
             inlineHelpText: Provider routing family
-            helpText: Select the provider signature that BOT_AGENT uses to choose the correct adapter implementation.
+            helpText: Select the provider signature that CB_AGENT uses to choose the correct adapter implementation.
         }
     )
 

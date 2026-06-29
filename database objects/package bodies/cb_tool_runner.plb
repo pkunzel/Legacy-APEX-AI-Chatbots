@@ -1,11 +1,11 @@
 /**
- * @file bot_tool_runner.plb
+ * @file cb_tool_runner.plb
  * @description Tool registry and execution facade for optional agent behavior.
- * @module bot_tool_runner
- * @dependencies cb_tools, bot_memory, APEX_DEBUG,
+ * @module cb_tool_runner
+ * @dependencies cb_tools, cb_memory, APEX_DEBUG,
  *               DBMS_LOB, DBMS_UTILITY, JSON_OBJECT_T
  */
-create or replace package body bot_tool_runner as
+create or replace package body cb_tool_runner as
 
    /**
     * @procedure append_text
@@ -140,8 +140,8 @@ create or replace package body bot_tool_runner as
          raise_application_error(-20001, 'Conversation memory query cannot be blank');
       end if;
 
-      l_query_embedding := bot_memory.embed_message(l_query);
-      l_result := bot_memory.get_recalled_messages(
+      l_query_embedding := cb_memory.embed_message(l_query);
+      l_result := cb_memory.get_recalled_messages(
          p_bot_id          => p_bot_id,
          p_query_embedding => l_query_embedding,
          p_max_messages    => p_max_messages
@@ -273,7 +273,7 @@ create or replace package body bot_tool_runner as
       end;
 
       apex_debug.message(
-         'bot_tool_runner.execute_tool tool: '
+         'cb_tool_runner.execute_tool tool: '
          || p_tool_name
          || ', type: '
          || l_tool_type
@@ -293,11 +293,11 @@ create or replace package body bot_tool_runner as
    exception
       when others then
          apex_debug.error(
-            'Unexpected error in bot_tool_runner.execute_tool: '
+            'Unexpected error in cb_tool_runner.execute_tool: '
             || dbms_utility.format_error_stack
          );
          raise;
    end execute_tool;
 
-end bot_tool_runner;
+end cb_tool_runner;
 /

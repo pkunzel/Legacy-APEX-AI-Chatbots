@@ -15,7 +15,7 @@ page 20 (
         formAutoComplete: false
     }
     help {
-        helpText: Review model connection configurations used by BOT_AGENT. API keys are edited in the drawer form and are not displayed in this report.
+        helpText: Review model connection configurations used by CB_AGENT. API keys are edited in the drawer form and are not displayed in this report.
     }
 
     region ai-models-report (
@@ -123,7 +123,7 @@ page 20 (
                 dataType: STRING
             }
             comments {
-                comments: Summary: Provider signature routed by BOT_AGENT, such as OPENAI_COMPATIBLE or ANTHROPIC. Display Label: Signature Type. Display in Report: true. Display in Form: true. Format Mask: none. Value Required: true. Read Only: false. Primary Display Column: false. Authorization Scheme: none.
+                comments: Summary: Provider signature routed by CB_AGENT, such as OPENAI_COMPATIBLE or ANTHROPIC. Display Label: Signature Type. Display in Report: true. Display in Form: true. Format Mask: none. Value Required: true. Read Only: false. Primary Display Column: false. Authorization Scheme: none.
             }
         )
 

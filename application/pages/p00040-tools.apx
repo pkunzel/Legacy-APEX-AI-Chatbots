@@ -15,7 +15,7 @@ page 40 (
         formAutoComplete: false
     }
     help {
-        helpText: Review chatbot-owned tool definitions. Tools are read-only execution contracts exposed to the model by BOT_TOOL_RUNNER.
+        helpText: Review chatbot-owned tool definitions. Tools are read-only execution contracts exposed to the model by CB_TOOL_RUNNER.
     }
 
     region tools-report (
@@ -172,7 +172,7 @@ page 40 (
                 dataType: STRING
             }
             comments {
-                comments: Summary: Internal tool executor type used by BOT_TOOL_RUNNER. Display Label: Tool Type. Display in Report: true. Display in Form: true. Format Mask: none. Value Required: true. Read Only: false. Primary Display Column: false. Authorization Scheme: none.
+                comments: Summary: Internal tool executor type used by CB_TOOL_RUNNER. Display Label: Tool Type. Display in Report: true. Display in Form: true. Format Mask: none. Value Required: true. Read Only: false. Primary Display Column: false. Authorization Scheme: none.
             }
         )
 

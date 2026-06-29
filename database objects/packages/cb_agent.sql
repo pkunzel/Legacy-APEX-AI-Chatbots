@@ -1,15 +1,15 @@
 /**
- * @file bot_agent.sql
+ * @file cb_agent.sql
  * @description Public facade package for routing chatbot requests through a
  *              polymorphic provider object hierarchy.
- * @module bot_agent
+ * @module cb_agent
  * @dependencies cb_ai_models, cb_chatbots, cb_chatbot_conversations, APEX_DEBUG,
- *               bot_agent_util, bot_memory, bot_tool_runner, bot_provider_t,
- *               bot_openai_provider_t, bot_claude_provider_t
+ *               cb_agent_util, cb_memory, cb_tool_runner, cb_provider_t,
+ *               cb_openai_provider_t, cb_claude_provider_t
  * @notes Migration-safe database object. Supports caller-supplied provider
  *        parameters and model-table lookup through CB_AI_MODELS.
  */
-create or replace package bot_agent as
+create or replace package cb_agent as
    -- Signature families and caller-friendly aliases supported by the gateway.
    gc_signature_openai            constant varchar2(30) := 'OPENAI';
    gc_signature_openai_compatible constant varchar2(30) := 'OPENAI_COMPATIBLE';
@@ -23,7 +23,7 @@ create or replace package bot_agent as
    /**
     * @function get_text_response
     * @description Builds conversation context, creates the requested provider subtype,
-    *              dispatches through bot_provider_t, and returns assistant text.
+    *              dispatches through cb_provider_t, and returns assistant text.
     * @param p_signature_type Signature family: OPENAI or ANTHROPIC.
     * @param p_url Provider endpoint URL.
     * @param p_api_key Provider credential/header value.
@@ -110,5 +110,5 @@ create or replace package bot_agent as
       p_max_tokens                 in number default null
    ) return clob;
 
-end bot_agent;
+end cb_agent;
 /

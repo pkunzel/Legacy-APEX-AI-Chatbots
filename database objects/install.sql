@@ -6,31 +6,33 @@ set timing on
 
 prompt Installing AI chatbot database objects
 
+@@drop_legacy_bot_objects.sql
+
 @@tables/cb_chatbots.sql
 @@tables/cb_ai_models.sql
 @@tables/cb_chatbot_conversations.sql
 @@tables/cb_tools.sql
 
-@@types/bot_provider_t.sql
-@@types/bot_openai_provider_t.sql
-@@types/bot_claude_provider_t.sql
+@@types/cb_provider_t.sql
+@@types/cb_openai_provider_t.sql
+@@types/cb_claude_provider_t.sql
 
-@@packages/bot_agent_util.sql
-@@packages/bot_adapter_openai.sql
-@@packages/bot_adapter_claude.sql
-@@packages/bot_memory.sql
-@@packages/bot_tool_runner.sql
-@@packages/bot_agent.sql
+@@packages/cb_agent_util.sql
+@@packages/cb_adapter_openai.sql
+@@packages/cb_adapter_claude.sql
+@@packages/cb_memory.sql
+@@packages/cb_tool_runner.sql
+@@packages/cb_agent.sql
 
-@@type bodies/bot_openai_provider_t.plb
-@@type bodies/bot_claude_provider_t.plb
+@@type bodies/cb_openai_provider_t.plb
+@@type bodies/cb_claude_provider_t.plb
 
-@@package bodies/bot_agent_util.plb
-@@package bodies/bot_adapter_openai.plb
-@@package bodies/bot_adapter_claude.plb
-@@package bodies/bot_memory.plb
-@@package bodies/bot_tool_runner.plb
-@@package bodies/bot_agent.plb
+@@package bodies/cb_agent_util.plb
+@@package bodies/cb_adapter_openai.plb
+@@package bodies/cb_adapter_claude.plb
+@@package bodies/cb_memory.plb
+@@package bodies/cb_tool_runner.plb
+@@package bodies/cb_agent.plb
 
 @@triggers/cb_chatbot_conversations_biu.sql
 
@@ -49,15 +51,15 @@ select object_type,
        'CB_AI_MODELS',
        'CB_CHATBOT_CONVERSATIONS',
        'CB_TOOLS',
-       'BOT_PROVIDER_T',
-       'BOT_OPENAI_PROVIDER_T',
-       'BOT_CLAUDE_PROVIDER_T',
-       'BOT_AGENT_UTIL',
-       'BOT_ADAPTER_OPENAI',
-       'BOT_ADAPTER_CLAUDE',
-       'BOT_MEMORY',
-       'BOT_TOOL_RUNNER',
-       'BOT_AGENT',
+       'CB_PROVIDER_T',
+       'CB_OPENAI_PROVIDER_T',
+       'CB_CLAUDE_PROVIDER_T',
+       'CB_AGENT_UTIL',
+       'CB_ADAPTER_OPENAI',
+       'CB_ADAPTER_CLAUDE',
+       'CB_MEMORY',
+       'CB_TOOL_RUNNER',
+       'CB_AGENT',
        'CB_CHATBOT_CONVERSATIONS_BIU')
  order by object_type,
           object_name;
@@ -75,15 +77,15 @@ select name,
        text
   from user_errors
  where name in (
-       'BOT_PROVIDER_T',
-       'BOT_OPENAI_PROVIDER_T',
-       'BOT_CLAUDE_PROVIDER_T',
-       'BOT_AGENT_UTIL',
-       'BOT_ADAPTER_OPENAI',
-       'BOT_ADAPTER_CLAUDE',
-       'BOT_MEMORY',
-       'BOT_TOOL_RUNNER',
-       'BOT_AGENT',
+       'CB_PROVIDER_T',
+       'CB_OPENAI_PROVIDER_T',
+       'CB_CLAUDE_PROVIDER_T',
+       'CB_AGENT_UTIL',
+       'CB_ADAPTER_OPENAI',
+       'CB_ADAPTER_CLAUDE',
+       'CB_MEMORY',
+       'CB_TOOL_RUNNER',
+       'CB_AGENT',
        'CB_CHATBOT_CONVERSATIONS_BIU')
  order by name,
           sequence;
@@ -99,15 +101,15 @@ begin
            'CB_AI_MODELS',
            'CB_CHATBOT_CONVERSATIONS',
            'CB_TOOLS',
-           'BOT_PROVIDER_T',
-           'BOT_OPENAI_PROVIDER_T',
-           'BOT_CLAUDE_PROVIDER_T',
-           'BOT_AGENT_UTIL',
-           'BOT_ADAPTER_OPENAI',
-           'BOT_ADAPTER_CLAUDE',
-           'BOT_MEMORY',
-           'BOT_TOOL_RUNNER',
-           'BOT_AGENT',
+           'CB_PROVIDER_T',
+           'CB_OPENAI_PROVIDER_T',
+           'CB_CLAUDE_PROVIDER_T',
+           'CB_AGENT_UTIL',
+           'CB_ADAPTER_OPENAI',
+           'CB_ADAPTER_CLAUDE',
+           'CB_MEMORY',
+           'CB_TOOL_RUNNER',
+           'CB_AGENT',
            'CB_CHATBOT_CONVERSATIONS_BIU')
        and status <> 'VALID';
 

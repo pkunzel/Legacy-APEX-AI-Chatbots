@@ -1,17 +1,17 @@
 /**
- * @file bot_agent.plb
+ * @file cb_agent.plb
  * @description Facade package body for provider-neutral chatbot calls. It keeps
  *              one app-facing API while delegating provider selection to a true
  *              SQL object type hierarchy.
- * @module bot_agent
+ * @module cb_agent
  * @dependencies cb_ai_models, cb_chatbots, cb_chatbot_conversations, APEX_DEBUG,
- *               DBMS_LOB, DBMS_UTILITY, bot_agent_util, bot_memory,
- *               bot_tool_runner, bot_provider_t, bot_openai_provider_t,
- *               bot_claude_provider_t, JSON_OBJECT_T, JSON_ARRAY_T
+ *               DBMS_LOB, DBMS_UTILITY, cb_agent_util, cb_memory,
+ *               cb_tool_runner, cb_provider_t, cb_openai_provider_t,
+ *               cb_claude_provider_t, JSON_OBJECT_T, JSON_ARRAY_T
  * @notes Migration-safe database object. Supports caller-supplied provider
  *        parameters and model-table lookup through CB_AI_MODELS.
  */
-create or replace package body bot_agent as
+create or replace package body cb_agent as
 
    type t_ai_model_config is record (
       signature_type cb_ai_models.signature_type%type,
@@ -120,7 +120,7 @@ create or replace package body bot_agent as
 
    /**
     * @function create_provider
-    * @description Creates the concrete provider subtype behind a bot_provider_t reference.
+    * @description Creates the concrete provider subtype behind a cb_provider_t reference.
     */
    function create_provider (
       p_signature_type in varchar2,
@@ -128,18 +128,18 @@ create or replace package body bot_agent as
       p_api_key        in varchar2,
       p_model          in varchar2,
       p_max_tokens     in number
-   ) return bot_provider_t is
-      l_provider bot_provider_t;
+   ) return cb_provider_t is
+      l_provider cb_provider_t;
    begin
       if p_signature_type = gc_signature_anthropic then
-         l_provider := bot_claude_provider_t(
+         l_provider := cb_claude_provider_t(
             p_url,
             p_api_key,
             p_model,
             p_max_tokens
          );
       else
-         l_provider := bot_openai_provider_t(
+         l_provider := cb_openai_provider_t(
             p_url,
             p_api_key,
             p_model,
@@ -296,7 +296,7 @@ create or replace package body bot_agent as
           order by id
       )
       loop
-         bot_agent_util.append_message(
+         cb_agent_util.append_message(
             p_messages => l_messages,
             p_role     => rec.role,
             p_message  => rec.message
@@ -508,7 +508,7 @@ create or replace package body bot_agent as
    exception
       when others then
          apex_debug.message(
-            'bot_agent.parse_agent_response: model returned non-JSON final text: '
+            'cb_agent.parse_agent_response: model returned non-JSON final text: '
             || sqlerrm
          );
          return null;
@@ -525,13 +525,13 @@ create or replace package body bot_agent as
    ) is
       l_messages json_array_t;
    begin
-      l_messages := bot_agent_util.parse_message_array(
+      l_messages := cb_agent_util.parse_message_array(
          p_messages     => p_messages,
          p_context      => 'append_agent_message',
-         p_package_name => 'bot_agent'
+         p_package_name => 'cb_agent'
       );
 
-      bot_agent_util.append_message(
+      cb_agent_util.append_message(
          p_messages => l_messages,
          p_role     => p_role,
          p_message  => p_message
@@ -569,7 +569,7 @@ create or replace package body bot_agent as
     * @description Runs the bounded agent loop for bots with enabled tools.
     */
    function get_agent_response (
-      p_provider             in bot_provider_t,
+      p_provider             in cb_provider_t,
       p_bot_id               in number,
       p_system_prompt        in clob,
       p_history_messages     in clob,
@@ -588,7 +588,7 @@ create or replace package body bot_agent as
       l_tool_result       clob;
       l_max_tool_steps    number;
    begin
-      l_tool_instructions := bot_tool_runner.get_tool_instructions(p_bot_id);
+      l_tool_instructions := cb_tool_runner.get_tool_instructions(p_bot_id);
 
       if l_tool_instructions is null then
          return p_provider.get_text_response(
@@ -648,7 +648,7 @@ create or replace package body bot_agent as
                p_message  => l_model_response
             );
 
-            l_tool_result := bot_tool_runner.execute_tool(
+            l_tool_result := cb_tool_runner.execute_tool(
                p_bot_id        => p_bot_id,
                p_tool_name     => l_tool_name,
                p_arguments     => l_tool_arguments,
@@ -711,21 +711,21 @@ create or replace package body bot_agent as
       l_recalled_messages clob;
       l_message_embedding cb_chatbot_conversations.message_embedding%type;
       l_current_message   cb_chatbot_conversations.message%type;
-      l_provider          bot_provider_t;
+      l_provider          cb_provider_t;
    begin
       l_signature_type := normalize_signature_type(p_signature_type);
       l_max_tokens := nvl(p_max_tokens, default_max_tokens(l_signature_type));
 
-      apex_debug.message('bot_agent.get_text_response signature: ' || l_signature_type);
-      apex_debug.message('bot_agent.get_text_response model: ' || p_model);
-      apex_debug.message('bot_agent.get_text_response bot: ' || p_bot_id);
+      apex_debug.message('cb_agent.get_text_response signature: ' || l_signature_type);
+      apex_debug.message('cb_agent.get_text_response model: ' || p_model);
+      apex_debug.message('cb_agent.get_text_response bot: ' || p_bot_id);
 
       l_message_embedding := get_current_message_embedding(
          p_bot_id             => p_bot_id,
          p_current_message_id => p_current_message_id
       );
 
-      l_recalled_messages := bot_memory.get_recalled_messages(
+      l_recalled_messages := cb_memory.get_recalled_messages(
          p_bot_id          => p_bot_id,
          p_query_embedding => l_message_embedding,
          p_max_messages    => p_recall_message_count
@@ -750,11 +750,11 @@ create or replace package body bot_agent as
       );
 
       apex_debug.message(
-         'bot_agent.get_text_response provider: '
+         'cb_agent.get_text_response provider: '
          || l_provider.get_provider_name
       );
 
-      if bot_tool_runner.has_enabled_tools(p_bot_id) then
+      if cb_tool_runner.has_enabled_tools(p_bot_id) then
          l_current_message := get_current_message_text(
             p_bot_id             => p_bot_id,
             p_current_message_id => p_current_message_id
@@ -778,7 +778,7 @@ create or replace package body bot_agent as
    exception
       when others then
          apex_debug.error(
-            'Unexpected error in bot_agent.get_text_response: '
+            'Unexpected error in cb_agent.get_text_response: '
             || dbms_utility.format_error_stack
          );
          raise;
@@ -819,7 +819,7 @@ create or replace package body bot_agent as
    exception
       when others then
          apex_debug.error(
-            'Unexpected error in bot_agent.get_text_response by model ID: '
+            'Unexpected error in cb_agent.get_text_response by model ID: '
             || dbms_utility.format_error_stack
          );
          raise;
@@ -847,7 +847,7 @@ create or replace package body bot_agent as
       l_new_summary               clob;
       l_new_summary_sample        varchar2(4000);
       l_max_message_id            cb_chatbot_conversations.id%type;
-      l_provider                  bot_provider_t;
+      l_provider                  cb_provider_t;
    begin
       l_signature_type := normalize_signature_type(p_signature_type);
       l_max_tokens := nvl(p_max_tokens, default_max_tokens(l_signature_type));
@@ -859,9 +859,9 @@ create or replace package body bot_agent as
          raise_application_error(-20001, 'Latest message count cannot be negative');
       end if;
 
-      apex_debug.message('bot_agent.create_summary signature: ' || l_signature_type);
-      apex_debug.message('bot_agent.create_summary model: ' || p_model);
-      apex_debug.message('bot_agent.create_summary bot: ' || p_bot_id);
+      apex_debug.message('cb_agent.create_summary signature: ' || l_signature_type);
+      apex_debug.message('cb_agent.create_summary model: ' || p_model);
+      apex_debug.message('cb_agent.create_summary bot: ' || p_bot_id);
 
       l_max_message_id := get_summary_max_message_id(
          p_bot_id                    => p_bot_id,
@@ -925,7 +925,7 @@ create or replace package body bot_agent as
    exception
       when others then
          apex_debug.error(
-            'Unexpected error in bot_agent.create_summary: '
+            'Unexpected error in cb_agent.create_summary: '
             || dbms_utility.format_error_stack
          );
          raise;
@@ -962,11 +962,11 @@ create or replace package body bot_agent as
    exception
       when others then
          apex_debug.error(
-            'Unexpected error in bot_agent.create_summary by model ID: '
+            'Unexpected error in cb_agent.create_summary by model ID: '
             || dbms_utility.format_error_stack
          );
          raise;
    end create_summary;
 
-end bot_agent;
+end cb_agent;
 /
