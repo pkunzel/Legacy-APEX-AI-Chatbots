@@ -1,6 +1,6 @@
 # Legacy AI Chatbots
 
-Oracle Database and APEX-oriented chatbot proof of concept for a single APEX application.
+Oracle Database and APEX-oriented chatbot proof of concept for a single APEX application for applications unable to run APEX 26.1
 
 The project stores:
 

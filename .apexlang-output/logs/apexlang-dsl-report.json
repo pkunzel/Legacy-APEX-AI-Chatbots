@@ -1,0 +1,35 @@
+{
+  "mode": "dsl",
+  "status": "pass",
+  "runtimeComponentMap": {
+    "source": "query-valid-props",
+    "buildID": "26.1.0+3102",
+    "normalizerVersion": "node-json-v1"
+  },
+  "targets": [
+    "C:\\Users\\PauloKunzel\\Documents\\Codex Projects\\Demo AI Agent Chatbots\\application",
+    "C:\\Users\\PauloKunzel\\Documents\\Codex Projects\\Demo AI Agent Chatbots\\application\\application.apx",
+    "C:\\Users\\PauloKunzel\\Documents\\Codex Projects\\Demo AI Agent Chatbots\\application\\page-groups.apx",
+    "C:\\Users\\PauloKunzel\\Documents\\Codex Projects\\Demo AI Agent Chatbots\\application\\pages\\p00000-global-page.apx",
+    "C:\\Users\\PauloKunzel\\Documents\\Codex Projects\\Demo AI Agent Chatbots\\application\\pages\\p00001-home.apx",
+    "C:\\Users\\PauloKunzel\\Documents\\Codex Projects\\Demo AI Agent Chatbots\\application\\pages\\p00010-chatbots.apx",
+    "C:\\Users\\PauloKunzel\\Documents\\Codex Projects\\Demo AI Agent Chatbots\\application\\pages\\p00011-chatbot-form.apx",
+    "C:\\Users\\PauloKunzel\\Documents\\Codex Projects\\Demo AI Agent Chatbots\\application\\pages\\p00020-ai-models.apx",
+    "C:\\Users\\PauloKunzel\\Documents\\Codex Projects\\Demo AI Agent Chatbots\\application\\pages\\p00021-ai-model-form.apx",
+    "C:\\Users\\PauloKunzel\\Documents\\Codex Projects\\Demo AI Agent Chatbots\\application\\pages\\p00030-chatbot-conversations.apx",
+    "C:\\Users\\PauloKunzel\\Documents\\Codex Projects\\Demo AI Agent Chatbots\\application\\pages\\p00031-chatbot-conversation-form.apx",
+    "C:\\Users\\PauloKunzel\\Documents\\Codex Projects\\Demo AI Agent Chatbots\\application\\pages\\p00040-tools.apx",
+    "C:\\Users\\PauloKunzel\\Documents\\Codex Projects\\Demo AI Agent Chatbots\\application\\pages\\p00041-tool-form.apx",
+    "C:\\Users\\PauloKunzel\\Documents\\Codex Projects\\Demo AI Agent Chatbots\\application\\pages\\p09999-login.apx",
+    "C:\\Users\\PauloKunzel\\Documents\\Codex Projects\\Demo AI Agent Chatbots\\application\\shared-components\\authentications.apx",
+    "C:\\Users\\PauloKunzel\\Documents\\Codex Projects\\Demo AI Agent Chatbots\\application\\shared-components\\authorizations.apx",
+    "C:\\Users\\PauloKunzel\\Documents\\Codex Projects\\Demo AI Agent Chatbots\\application\\shared-components\\breadcrumbs.apx",
+    "C:\\Users\\PauloKunzel\\Documents\\Codex Projects\\Demo AI Agent Chatbots\\application\\shared-components\\build-options.apx",
+    "C:\\Users\\PauloKunzel\\Documents\\Codex Projects\\Demo AI Agent Chatbots\\application\\shared-components\\component-settings.apx",
+    "C:\\Users\\PauloKunzel\\Documents\\Codex Projects\\Demo AI Agent Chatbots\\application\\shared-components\\lists.apx",
+    "C:\\Users\\PauloKunzel\\Documents\\Codex Projects\\Demo AI Agent Chatbots\\application\\shared-components\\lovs.apx",
+    "C:\\Users\\PauloKunzel\\Documents\\Codex Projects\\Demo AI Agent Chatbots\\application\\shared-components\\static-files.apx",
+    "C:\\Users\\PauloKunzel\\Documents\\Codex Projects\\Demo AI Agent Chatbots\\application\\shared-components\\themes\\universal-theme\\theme.apx"
+  ],
+  "issues": []
+}

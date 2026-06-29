@@ -1,0 +1,21 @@
+{
+  "app_path": "C:\\Users\\PauloKunzel\\Documents\\Codex Projects\\Demo AI Agent Chatbots\\application",
+  "mmd_version": "26.1.0+3102",
+  "supported_version": true,
+  "rewrite_requested": false,
+  "check_only": true,
+  "files_scanned": [
+    "C:\\Users\\PauloKunzel\\Documents\\Codex Projects\\Demo AI Agent Chatbots\\application\\application.apx",
+    "C:\\Users\\PauloKunzel\\Documents\\Codex Projects\\Demo AI Agent Chatbots\\application\\pages\\p00001-home.apx",
+    "C:\\Users\\PauloKunzel\\Documents\\Codex Projects\\Demo AI Agent Chatbots\\application\\pages\\p09999-login.apx",
+    "C:\\Users\\PauloKunzel\\Documents\\Codex Projects\\Demo AI Agent Chatbots\\application\\shared-components\\breadcrumbs.apx",
+    "C:\\Users\\PauloKunzel\\Documents\\Codex Projects\\Demo AI Agent Chatbots\\application\\shared-components\\themes\\universal-theme\\theme.apx"
+  ],
+  "files_touched": [],
+  "rewrites": [],
+  "legacy_aliases_found": [],
+  "mixed_vocabulary_detected": false,
+  "mixed_vocabulary_files": [],
+  "blocking_reason": "",
+  "unresolved": []
+}
