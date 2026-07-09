@@ -13,8 +13,7 @@ The mature version should support:
 - Optional read-only tools for agent behavior.
 - APEX screens for chatbot CRUD, model configuration, conversations, summary
   actions, and chat interaction.
-- Install and upgrade workflows that are repeatable outside ad hoc SQL Workshop
-  testing.
+- Plain SQL Workshop installation for the proof of concept.
 
 ## Future Application Layer
 
@@ -40,8 +39,7 @@ Future hardening should revisit:
 - Network ACL and HTTPS wallet setup.
 - Logging policies so production debug logs do not expose sensitive endpoint or
   credential-adjacent details.
-- Install packaging through SQLcl, Liquibase, or another controlled deployment
-  path.
+- Normalizing scripts toward unquoted lowercase DDL.
 
 ## Future Memory And Retrieval
 
@@ -52,8 +50,6 @@ Future memory improvements may include:
 - Adding a vector index when recall volume requires it.
 - Separating summary memory from raw recalled message memory if summary quality
   becomes noisy.
-- Adding multiple conversation threads per chatbot if the product requires real
-  multi-user use.
 
 ## Future Tooling
 
@@ -72,7 +68,7 @@ feature by:
 Provider strategy can evolve by:
 
 - Keeping Novita and similar services under the OpenAI-compatible adapter when
-  their API shape matches.
+  their web-service signature matches.
 - Adding provider-specific adapters only when options, request shape, or response
   parsing materially diverge.
 - Adding model options such as temperature, top-p, response format, or provider

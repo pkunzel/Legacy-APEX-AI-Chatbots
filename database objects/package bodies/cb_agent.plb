@@ -21,6 +21,8 @@ create or replace package body cb_agent as
       max_tokens     cb_ai_models.max_tokens%type
    );
 
+   gc_message_max_chars constant number := 8000;
+
    /**
     * @function normalize_signature_type
     * @description Normalizes caller-provided provider signature aliases.
@@ -149,6 +151,47 @@ create or replace package body cb_agent as
 
       return l_provider;
    end create_provider;
+
+   /**
+    * @function validate_chat_response
+    * @description Enforces the conversation message storage limit for chat replies.
+    */
+   function validate_chat_response (
+      p_response in clob,
+      p_bot_id   in number,
+      p_model    in varchar2
+   ) return clob is
+      l_length number;
+   begin
+      if p_response is null then
+         return null;
+      end if;
+
+      l_length := dbms_lob.getlength(p_response);
+
+      if l_length > gc_message_max_chars then
+         apex_debug.error(
+            'cb_agent.get_text_response returned '
+            || l_length
+            || ' characters for chatbot '
+            || p_bot_id
+            || ', model '
+            || p_model
+            || '. Maximum conversation message length is '
+            || gc_message_max_chars
+            || ' characters.'
+         );
+
+         raise_application_error(
+            -20005,
+            'Assistant response exceeds the maximum conversation message length of '
+            || gc_message_max_chars
+            || ' characters.'
+         );
+      end if;
+
+      return p_response;
+   end validate_chat_response;
 
    /**
     * @procedure append_context_section
@@ -712,6 +755,7 @@ create or replace package body cb_agent as
       l_message_embedding cb_chatbot_conversations.message_embedding%type;
       l_current_message   cb_chatbot_conversations.message%type;
       l_provider          cb_provider_t;
+      l_response          clob;
    begin
       l_signature_type := normalize_signature_type(p_signature_type);
       l_max_tokens := nvl(p_max_tokens, default_max_tokens(l_signature_type));
@@ -760,7 +804,7 @@ create or replace package body cb_agent as
             p_current_message_id => p_current_message_id
          );
 
-         return get_agent_response(
+         l_response := get_agent_response(
             p_provider             => l_provider,
             p_bot_id               => p_bot_id,
             p_system_prompt        => l_system_prompt,
@@ -768,12 +812,24 @@ create or replace package body cb_agent as
             p_current_message_text => l_current_message,
             p_max_tool_steps       => p_max_tool_steps
          );
+
+         return validate_chat_response(
+            p_response => l_response,
+            p_bot_id   => p_bot_id,
+            p_model    => p_model
+         );
       end if;
 
-      return l_provider.get_text_response(
+      l_response := l_provider.get_text_response(
          p_system_prompt    => l_system_prompt,
          p_history_messages => l_history_messages,
          p_user_message     => null
+      );
+
+      return validate_chat_response(
+         p_response => l_response,
+         p_bot_id   => p_bot_id,
+         p_model    => p_model
       );
    exception
       when others then

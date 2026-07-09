@@ -2,26 +2,29 @@
  * @file cb_memory.sql
  * @description Conversation memory helpers for semantic recall of summarized messages.
  * @module cb_memory
- * @dependencies APEX_AI, APEX_DEBUG, DBMS_UTILITY
+ * @dependencies cb_chatbot_conversations, cb_logs, APEX_AI, APEX_DEBUG,
+ *               DBMS_UTILITY
  * @notes Keeps embedding generation outside table triggers and outside the
  *        provider adapters. This package repairs summary degradation by
  *        recalling older summarized conversation messages when they are
  *        semantically relevant to the current turn.
  */
 create or replace package cb_memory as
-   gc_embedding_service_static_id constant varchar2(255) := 'onnx-model';
+   gc_embedding_service_static_id constant varchar2(255) := 'db_onnx_model';
 
    /**
     * @function embed_message
     * @description Returns a vector embedding for nonblank message text.
     * @param p_message Message text to embed.
     * @param p_service_static_id APEX AI service static ID for the embedding model.
-    * @returns VECTOR embedding, or null when p_message is null/blank.
+    * @param p_chatbot_id Optional chatbot ID for embedding-failure logs.
+    * @returns VECTOR embedding, or null when p_message is null/blank or embedding fails.
     */
    function embed_message (
       p_message           in varchar2,
-      p_service_static_id in varchar2 default gc_embedding_service_static_id
-   ) return vector;
+      p_service_static_id in varchar2 default gc_embedding_service_static_id,
+      p_chatbot_id        in number default null
+   ) return cb_chatbot_conversations.message_embedding%type;
 
    /**
     * @function get_recalled_messages

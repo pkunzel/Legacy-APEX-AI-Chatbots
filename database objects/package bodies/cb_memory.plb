@@ -2,9 +2,37 @@
  * @file cb_memory.plb
  * @description Conversation memory package body for semantic recall of summarized messages.
  * @module cb_memory
- * @dependencies APEX_AI, APEX_DEBUG, DBMS_UTILITY
+ * @dependencies cb_chatbot_conversations, cb_logs, APEX_AI, APEX_DEBUG,
+ *               DBMS_UTILITY
  */
 create or replace package body cb_memory as
+
+   /**
+    * @procedure log_embedding_error
+    * @description Writes embedding failures to the POC log table without blocking callers.
+    */
+   procedure log_embedding_error (
+      p_chatbot_id in number,
+      p_location   in varchar2
+   ) is
+   begin
+      insert into cb_logs (
+         chatbot_id,
+         error,
+         location
+      ) values (
+         p_chatbot_id,
+         dbms_utility.format_error_stack
+         || dbms_utility.format_error_backtrace,
+         p_location
+      );
+   exception
+      when others then
+         apex_debug.error(
+            'Unexpected error while logging embedding failure: '
+            || dbms_utility.format_error_stack
+         );
+   end log_embedding_error;
 
    /**
     * @function get_embedding_text
@@ -34,10 +62,11 @@ create or replace package body cb_memory as
     */
    function embed_message (
       p_message           in varchar2,
-      p_service_static_id in varchar2 default gc_embedding_service_static_id
-   ) return vector is
+      p_service_static_id in varchar2 default gc_embedding_service_static_id,
+      p_chatbot_id        in number default null
+   ) return cb_chatbot_conversations.message_embedding%type is
       l_message   varchar2(4000);
-      l_embedding vector;
+      l_embedding cb_chatbot_conversations.message_embedding%type;
    begin
       if p_service_static_id is null then
          raise_application_error(-20001, 'Embedding service static ID cannot be null');
@@ -61,7 +90,13 @@ create or replace package body cb_memory as
             'Unexpected error in cb_memory.embed_message: '
             || dbms_utility.format_error_stack
          );
-         raise;
+
+         log_embedding_error(
+            p_chatbot_id => p_chatbot_id,
+            p_location   => 'cb_memory.embed_message.apex_ai.get_vector_embeddings'
+         );
+
+         return null;
    end embed_message;
 
    /**

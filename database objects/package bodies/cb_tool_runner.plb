@@ -140,7 +140,10 @@ create or replace package body cb_tool_runner as
          raise_application_error(-20001, 'Conversation memory query cannot be blank');
       end if;
 
-      l_query_embedding := cb_memory.embed_message(l_query);
+      l_query_embedding := cb_memory.embed_message(
+         p_message    => l_query,
+         p_chatbot_id => p_bot_id
+      );
       l_result := cb_memory.get_recalled_messages(
          p_bot_id          => p_bot_id,
          p_query_embedding => l_query_embedding,

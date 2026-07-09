@@ -139,7 +139,7 @@ This project expects an Oracle Database and APEX environment with support for:
 - object types and polymorphic methods
 - the `VECTOR` datatype used for embeddings
 
-The embedding helper uses the APEX AI service static ID `onnx-model`.
+The embedding helper uses the APEX AI service static ID `db_onnx_model`.
 
 ## Notes
 

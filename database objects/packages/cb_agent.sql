@@ -34,6 +34,8 @@ create or replace package cb_agent as
     * @param p_max_tokens Optional maximum response tokens. Defaults by signature type.
     * @param p_max_tool_steps Maximum tool calls allowed when the bot has tools.
     * @returns CLOB containing assistant text or provider response parse diagnostics.
+    *          Chat responses longer than CB_CHATBOT_CONVERSATIONS.MESSAGE are
+    *          logged and rejected; summaries remain CLOB-based.
     */
    function get_text_response (
       p_signature_type       in varchar2,
@@ -58,6 +60,8 @@ create or replace package cb_agent as
     * @param p_max_tokens Optional maximum response tokens. Overrides cb_ai_models.max_tokens when provided.
     * @param p_max_tool_steps Maximum tool calls allowed when the bot has tools.
     * @returns CLOB containing assistant text or provider response parse diagnostics.
+    *          Chat responses longer than CB_CHATBOT_CONVERSATIONS.MESSAGE are
+    *          logged and rejected; summaries remain CLOB-based.
     */
    function get_text_response (
       p_model_id             in number,

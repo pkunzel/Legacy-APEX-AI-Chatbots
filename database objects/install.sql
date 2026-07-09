@@ -12,6 +12,7 @@ prompt Installing AI chatbot database objects
 @@tables/cb_ai_models.sql
 @@tables/cb_chatbot_conversations.sql
 @@tables/cb_tools.sql
+@@tables/cb_logs.sql
 
 @@types/cb_provider_t.sql
 @@types/cb_openai_provider_t.sql
@@ -51,6 +52,7 @@ select object_type,
        'CB_AI_MODELS',
        'CB_CHATBOT_CONVERSATIONS',
        'CB_TOOLS',
+       'CB_LOGS',
        'CB_PROVIDER_T',
        'CB_OPENAI_PROVIDER_T',
        'CB_CLAUDE_PROVIDER_T',
@@ -101,6 +103,7 @@ begin
            'CB_AI_MODELS',
            'CB_CHATBOT_CONVERSATIONS',
            'CB_TOOLS',
+           'CB_LOGS',
            'CB_PROVIDER_T',
            'CB_OPENAI_PROVIDER_T',
            'CB_CLAUDE_PROVIDER_T',
