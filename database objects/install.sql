@@ -24,15 +24,15 @@ prompt Installing AI chatbot database objects
 @@packages/cb_tool_runner.sql
 @@packages/cb_agent.sql
 
-@@type bodies/cb_openai_provider_t.plb
-@@type bodies/cb_claude_provider_t.plb
+@@"type bodies/cb_openai_provider_t.plb"
+@@"type bodies/cb_claude_provider_t.plb"
 
-@@package bodies/cb_agent_util.plb
-@@package bodies/cb_adapter_openai.plb
-@@package bodies/cb_adapter_claude.plb
-@@package bodies/cb_memory.plb
-@@package bodies/cb_tool_runner.plb
-@@package bodies/cb_agent.plb
+@@"package bodies/cb_agent_util.plb"
+@@"package bodies/cb_adapter_openai.plb"
+@@"package bodies/cb_adapter_claude.plb"
+@@"package bodies/cb_memory.plb"
+@@"package bodies/cb_tool_runner.plb"
+@@"package bodies/cb_agent.plb"
 
 @@triggers/cb_chatbot_conversations_biu.sql
 

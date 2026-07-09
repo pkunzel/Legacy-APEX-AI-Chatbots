@@ -117,6 +117,13 @@ create or replace package body cb_adapter_claude as
          if l_content_array is not null
          and l_content_array.get_size > 0 then
             l_message_json_obj := json_object_t(l_content_array.get(0));
+
+            -- Starting in Claude 5 we're getting the thinking object often
+            -- in the position 1 of the content array
+            if l_message_json_obj.get_string('type') = 'thinking' then
+               l_message_json_obj := json_object_t(l_content_array.get(1));
+            end if;
+
             l_assistant_text := l_message_json_obj.get_string('text');
 
             if l_assistant_text is null then
