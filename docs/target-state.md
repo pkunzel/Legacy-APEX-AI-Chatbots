@@ -45,8 +45,6 @@ Future hardening should revisit:
 
 Future memory improvements may include:
 
-- Tightening `MESSAGE_EMBEDDING` from flexible `vector` to the exact embedding
-  dimension returned by the local ONNX model.
 - Adding a vector index when recall volume requires it.
 - Separating summary memory from raw recalled message memory if summary quality
   becomes noisy.

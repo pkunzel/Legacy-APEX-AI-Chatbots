@@ -6,7 +6,7 @@
 | --- | --- | --- |
 | `CB_CHATBOTS` | `tables/cb_chatbots.sql` | Stores chatbot definitions, prompts, welcome text, summary prompt, current summary, and created date. |
 | `CB_AI_MODELS` | `tables/cb_ai_models.sql` | Stores AI model connection configurations, including signature type, endpoint URL, raw API secret, provider model ID, and optional token limit. |
-| `CB_CHATBOT_CONVERSATIONS` | `tables/cb_chatbot_conversations.sql` | Stores chatbot conversation messages, message role, `VARCHAR2(8000 CHAR)` message text, optional message embedding, summary status, and created date. |
+| `CB_CHATBOT_CONVERSATIONS` | `tables/cb_chatbot_conversations.sql` | Stores chatbot conversation messages, message role, `VARCHAR2(8000 CHAR)` message text, optional `vector(384, float32)` message embedding, summary status, and created date. |
 | `CB_TOOLS` | `tables/cb_tools.sql` | Stores chatbot-owned read-only agent tool definitions exposed to LLMs. Tool use is optional scaffolding in Phase 1. |
 | `CB_LOGS` | `tables/cb_logs.sql` | Lightweight dump table for non-blocking proof-of-concept errors, currently embedding failures. |
 
