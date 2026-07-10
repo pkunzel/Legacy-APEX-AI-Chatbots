@@ -4,7 +4,8 @@
 
 | Object | File | Purpose |
 | --- | --- | --- |
-| `CB_CHATBOTS` | `tables/cb_chatbots.sql` | Stores chatbot definitions, prompts, welcome text, summary prompt, current summary, and created date. |
+| `CB_CHATBOTS` | `tables/cb_chatbots.sql` | Stores chatbot definitions, display image metadata, prompts, welcome text, summary prompt, current summary, and created date. |
+| `CB_CHATBOT_IMAGES` | `tables/cb_chatbot_images.sql` | Stores chatbot-owned images, text definitions, definition embeddings, thumbnail flags, and searchable product context. |
 | `CB_AI_MODELS` | `tables/cb_ai_models.sql` | Stores AI model connection configurations, including signature type, endpoint URL, raw API secret, provider model ID, and optional token limit. |
 | `CB_CHATBOT_CONVERSATIONS` | `tables/cb_chatbot_conversations.sql` | Stores chatbot conversation messages, message role, `VARCHAR2(8000 CHAR)` message text, optional `vector(384, float32)` message embedding, summary status, and created date. |
 | `CB_TOOLS` | `tables/cb_tools.sql` | Stores chatbot-owned read-only agent tool definitions exposed to LLMs. Tool use is optional scaffolding in Phase 1. |
@@ -37,6 +38,7 @@
 | Object | File | Purpose |
 | --- | --- | --- |
 | `CB_CHATBOT_CONVERSATIONS_BIU` | `triggers/cb_chatbot_conversations_biu.sql` | Populates `MESSAGE_EMBEDDING` before insert or message update. |
+| `CB_CHATBOT_IMAGES_BIU` | `triggers/cb_chatbot_images_biu.sql` | Populates `IMAGE_DEFINITION_EMBEDDING` before insert or image definition update. |
 
 ## Type Specs
 
@@ -58,27 +60,29 @@
 The current install driver is `install.sql`.
 
 1. `tables/cb_chatbots.sql`
-2. `tables/cb_ai_models.sql`
-3. `tables/cb_chatbot_conversations.sql`
-4. `tables/cb_tools.sql`
-5. `tables/cb_logs.sql`
-6. `types/cb_provider_t.sql`
-7. `types/cb_openai_provider_t.sql`
-8. `types/cb_claude_provider_t.sql`
-9. `packages/cb_agent_util.sql`
-10. `packages/cb_adapter_openai.sql`
-11. `packages/cb_adapter_claude.sql`
-12. `packages/cb_memory.sql`
-13. `packages/cb_tool_runner.sql`
-14. `packages/cb_agent.sql`
-15. `type bodies/cb_openai_provider_t.plb`
-16. `type bodies/cb_claude_provider_t.plb`
-17. `package bodies/cb_agent_util.plb`
-18. `package bodies/cb_adapter_openai.plb`
-19. `package bodies/cb_adapter_claude.plb`
-20. `package bodies/cb_memory.plb`
-21. `package bodies/cb_tool_runner.plb`
-22. `package bodies/cb_agent.plb`
-23. `triggers/cb_chatbot_conversations_biu.sql`
+2. `tables/cb_chatbot_images.sql`
+3. `tables/cb_ai_models.sql`
+4. `tables/cb_chatbot_conversations.sql`
+5. `tables/cb_tools.sql`
+6. `tables/cb_logs.sql`
+7. `types/cb_provider_t.sql`
+8. `types/cb_openai_provider_t.sql`
+9. `types/cb_claude_provider_t.sql`
+10. `packages/cb_agent_util.sql`
+11. `packages/cb_adapter_openai.sql`
+12. `packages/cb_adapter_claude.sql`
+13. `packages/cb_memory.sql`
+14. `packages/cb_tool_runner.sql`
+15. `packages/cb_agent.sql`
+16. `type bodies/cb_openai_provider_t.plb`
+17. `type bodies/cb_claude_provider_t.plb`
+18. `package bodies/cb_agent_util.plb`
+19. `package bodies/cb_adapter_openai.plb`
+20. `package bodies/cb_adapter_claude.plb`
+21. `package bodies/cb_memory.plb`
+22. `package bodies/cb_tool_runner.plb`
+23. `package bodies/cb_agent.plb`
+24. `triggers/cb_chatbot_conversations_biu.sql`
+25. `triggers/cb_chatbot_images_biu.sql`
 
 `install.sql` also runs object-status and `USER_ERRORS` checks after installation.

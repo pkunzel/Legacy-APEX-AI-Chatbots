@@ -9,6 +9,7 @@ prompt Installing AI chatbot database objects
 @@drop_legacy_bot_objects.sql
 
 @@tables/cb_chatbots.sql
+@@tables/cb_chatbot_images.sql
 @@tables/cb_ai_models.sql
 @@tables/cb_chatbot_conversations.sql
 @@tables/cb_tools.sql
@@ -36,6 +37,7 @@ prompt Installing AI chatbot database objects
 @@"package bodies/cb_agent.plb"
 
 @@triggers/cb_chatbot_conversations_biu.sql
+@@triggers/cb_chatbot_images_biu.sql
 
 prompt Checking installed object status
 
@@ -49,6 +51,7 @@ select object_type,
   from user_objects
  where object_name in (
        'CB_CHATBOTS',
+       'CB_CHATBOT_IMAGES',
        'CB_AI_MODELS',
        'CB_CHATBOT_CONVERSATIONS',
        'CB_TOOLS',
@@ -62,7 +65,8 @@ select object_type,
        'CB_MEMORY',
        'CB_TOOL_RUNNER',
        'CB_AGENT',
-       'CB_CHATBOT_CONVERSATIONS_BIU')
+       'CB_CHATBOT_CONVERSATIONS_BIU',
+       'CB_CHATBOT_IMAGES_BIU')
  order by object_type,
           object_name;
 
@@ -88,7 +92,8 @@ select name,
        'CB_MEMORY',
        'CB_TOOL_RUNNER',
        'CB_AGENT',
-       'CB_CHATBOT_CONVERSATIONS_BIU')
+       'CB_CHATBOT_CONVERSATIONS_BIU',
+       'CB_CHATBOT_IMAGES_BIU')
  order by name,
           sequence;
 
@@ -100,6 +105,7 @@ begin
       from user_objects
      where object_name in (
            'CB_CHATBOTS',
+           'CB_CHATBOT_IMAGES',
            'CB_AI_MODELS',
            'CB_CHATBOT_CONVERSATIONS',
            'CB_TOOLS',
@@ -113,7 +119,8 @@ begin
            'CB_MEMORY',
            'CB_TOOL_RUNNER',
            'CB_AGENT',
-           'CB_CHATBOT_CONVERSATIONS_BIU')
+           'CB_CHATBOT_CONVERSATIONS_BIU',
+           'CB_CHATBOT_IMAGES_BIU')
        and status <> 'VALID';
 
     if l_invalid_count > 0 then

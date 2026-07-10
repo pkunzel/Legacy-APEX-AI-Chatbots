@@ -9,7 +9,8 @@ The mature version should support:
 
 - Multiple configurable chatbots.
 - Runtime model selection or bot-level model defaults.
-- Long conversations through summary plus vector recall.
+- Long conversations through summary plus vector recall to improve quality of data based on the user's question.
+- Image to text comparison (eg.: User asks for a product)
 - Optional read-only tools for agent behavior.
 - APEX screens for chatbot CRUD, model configuration, conversations, summary
   actions, and chat interaction.

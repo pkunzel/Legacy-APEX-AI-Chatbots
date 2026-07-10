@@ -4,6 +4,12 @@ create table "CB_CHATBOTS" (
    ,"DISPLAY" 'ID',"PRIMARYKEY" ),
    "NAME"            varchar2(150 char) not null enable annotations ( "DESCRIPTION" 'Unique chatbot name shown to administrators or users.'
    ,"DISPLAY" 'Name' ),
+   "IMAGE"           blob
+      annotations ( "DESCRIPTION" 'Optional display image or thumbnail for the chatbot.',"DISPLAY" 'Image' ),
+   "IMAGE_MIME_TYPE" varchar2(100 char)
+      annotations ( "DESCRIPTION" 'MIME type for the chatbot display image.',"DISPLAY" 'Image MIME Type' ),
+   "IMAGE_FILENAME"  varchar2(255 char)
+      annotations ( "DESCRIPTION" 'Original filename for the chatbot display image.',"DISPLAY" 'Image Filename' ),
    "PROMPT"          clob
       annotations ( "DESCRIPTION" 'Primary system or instruction prompt for the chatbot.',"DISPLAY" 'Prompt' ),
    "WELCOME_MESSAGE" clob
@@ -18,4 +24,4 @@ create table "CB_CHATBOTS" (
       using index enable,
    constraint "CHATBOTS_NAME_UNQ" unique ( "NAME" )
       using index enable
-) annotations ( "DESCRIPTION" 'Stores chatbot definitions and prompt configuration.',"DISPLAY" 'Chatbots' );
+) annotations ( "DESCRIPTION" 'Stores chatbot definitions, display image metadata, and prompt configuration.',"DISPLAY" 'Chatbots' );

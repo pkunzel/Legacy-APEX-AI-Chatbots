@@ -5,6 +5,7 @@ Oracle Database and APEX-oriented chatbot proof of concept for a single APEX app
 The project stores:
 
 - chatbot definitions and prompts
+- chatbot display images and searchable product images
 - AI model connection settings
 - conversation messages and embeddings
 - optional chatbot-specific tools
@@ -39,7 +40,8 @@ Key objects:
 
 | Object | Purpose |
 | --- | --- |
-| `CB_CHATBOTS` | Stores chatbot definitions, prompts, welcome text, and running summary text. |
+| `CB_CHATBOTS` | Stores chatbot definitions, display image metadata, prompts, welcome text, and running summary text. |
+| `CB_CHATBOT_IMAGES` | Stores chatbot-owned images, image definitions, and definition embeddings for searchable product context. |
 | `CB_AI_MODELS` | Stores provider URL, API key, model name, signature type, and optional default token limit. |
 | `CB_CHATBOT_CONVERSATIONS` | Stores conversation messages, role, embedding, summary flag, and timestamps. |
 | `CB_TOOLS` | Stores chatbot-owned tool definitions exposed to the LLM. |
@@ -51,6 +53,7 @@ Key objects:
 | `CB_MEMORY` | Embedding and semantic recall helpers. |
 | `CB_TOOL_RUNNER` | Tool registry and execution facade. |
 | `CB_CHATBOT_CONVERSATIONS_BIU` | Trigger that maintains message embeddings. |
+| `CB_CHATBOT_IMAGES_BIU` | Trigger that maintains image definition embeddings. |
 
 ## Runtime Flow
 
@@ -103,30 +106,32 @@ CB_AGENT.get_text_response(
 
 ## Install Order
 
-There is no install driver script yet, so the objects are expected to be loaded in dependency order:
+Use `database objects/install.sql` to load the objects in dependency order:
 
 1. `tables/cb_chatbots.sql`
-2. `tables/cb_ai_models.sql`
-3. `tables/cb_chatbot_conversations.sql`
-4. `tables/cb_tools.sql`
-5. `types/cb_provider_t.sql`
-6. `types/cb_openai_provider_t.sql`
-7. `types/cb_claude_provider_t.sql`
-8. `packages/cb_agent_util.sql`
-9. `packages/cb_adapter_openai.sql`
-10. `packages/cb_adapter_claude.sql`
-11. `packages/cb_memory.sql`
-12. `packages/cb_tool_runner.sql`
-13. `packages/cb_agent.sql`
-14. `type bodies/cb_openai_provider_t.plb`
-15. `type bodies/cb_claude_provider_t.plb`
-16. `package bodies/cb_agent_util.plb`
-17. `package bodies/cb_adapter_openai.plb`
-18. `package bodies/cb_adapter_claude.plb`
-19. `package bodies/cb_memory.plb`
-20. `package bodies/cb_tool_runner.plb`
-21. `package bodies/cb_agent.plb`
-22. `triggers/cb_chatbot_conversations_biu.sql`
+2. `tables/cb_chatbot_images.sql`
+3. `tables/cb_ai_models.sql`
+4. `tables/cb_chatbot_conversations.sql`
+5. `tables/cb_tools.sql`
+6. `types/cb_provider_t.sql`
+7. `types/cb_openai_provider_t.sql`
+8. `types/cb_claude_provider_t.sql`
+9. `packages/cb_agent_util.sql`
+10. `packages/cb_adapter_openai.sql`
+11. `packages/cb_adapter_claude.sql`
+12. `packages/cb_memory.sql`
+13. `packages/cb_tool_runner.sql`
+14. `packages/cb_agent.sql`
+15. `type bodies/cb_openai_provider_t.plb`
+16. `type bodies/cb_claude_provider_t.plb`
+17. `package bodies/cb_agent_util.plb`
+18. `package bodies/cb_adapter_openai.plb`
+19. `package bodies/cb_adapter_claude.plb`
+20. `package bodies/cb_memory.plb`
+21. `package bodies/cb_tool_runner.plb`
+22. `package bodies/cb_agent.plb`
+23. `triggers/cb_chatbot_conversations_biu.sql`
+24. `triggers/cb_chatbot_images_biu.sql`
 
 ## Dependencies
 
@@ -152,7 +157,6 @@ The embedding helper uses the APEX AI service static ID `db_onnx_model`.
 
 ## Known Gaps
 
-- There is no install wrapper script yet.
 - Vector dimensions are still flexible in `CB_CHATBOT_CONVERSATIONS.MESSAGE_EMBEDDING`.
 - Network ACL, wallet, and certificate setup are not documented here yet.
 - SQL export packaging and Liquibase support are not part of this repository snapshot.
