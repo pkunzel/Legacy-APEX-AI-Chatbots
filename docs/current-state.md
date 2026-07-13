@@ -16,9 +16,9 @@ when generating future replies.
 - Raw provider credentials may be stored in `CB_AI_MODELS`.
 - APEX application exports are not kept here yet because the target OCI
   environment is limited to APEX 24.2.
-- The application layer owns screen flow, page items, button behavior, message
-  CRUD, model selection, and assistant-message insertion after `CB_AGENT`
-  returns text.
+- The application layer owns screen flow, page items, button behavior, and
+  model selection. `CB_CONVERSATION.submit_turn` owns the multi-step user
+  message, response-generation, and assistant-message persistence workflow.
 - Vector embeddings are saved in `MESSAGE_EMBEDDING` as `vector(384, float32)`
   and used for memory recall, but no vector index is required yet.
 - Tool structures exist, but active tool workflows are not part of the current
@@ -43,22 +43,23 @@ when generating future replies.
 
 ## Runtime Chat Flow
 
-1. The caller saves the user's message to `CB_CHATBOT_CONVERSATIONS` with
-   `ROLE = 'user'`.
-2. The before-row trigger populates `MESSAGE_EMBEDDING` by calling
+1. The caller invokes `CB_CONVERSATION.submit_turn` with a new user message, or
+   with a blank message to generate another response for the latest user message.
+2. `CB_CONVERSATION` saves a nonblank user message or locates the latest live
+   user message for regeneration.
+3. The before-row trigger populates `MESSAGE_EMBEDDING` by calling
    `CB_MEMORY.embed_message`. If embedding fails, `CB_MEMORY` writes the error
    to `CB_LOGS`, returns null, and allows the message write to continue.
-3. The caller invokes `CB_AGENT.get_text_response` with either direct provider
-   details or a `CB_AI_MODELS.ID`.
-4. `CB_AGENT` loads the current user-message row by `p_current_message_id`.
+4. `CB_CONVERSATION` invokes `CB_AGENT.get_text_response` using the current
+   user-message row and selected `CB_AI_MODELS.ID`.
 5. `CB_AGENT` recalls summarized messages through `CB_MEMORY.get_recalled_messages`.
 6. `CB_AGENT` builds context from the bot prompt, current summary, recalled
    memory, and unsummarized conversation rows.
 7. `CB_AGENT` creates a provider subtype and returns the assistant text.
-8. The caller inserts the assistant reply into `CB_CHATBOT_CONVERSATIONS`.
+8. `CB_CONVERSATION` saves the assistant reply to `CB_CHATBOT_CONVERSATIONS`.
 
-`CB_AGENT.get_text_response` does not insert the assistant reply and does not
-commit. Transaction boundaries belong to the caller.
+`CB_AGENT.get_text_response` does not insert the assistant reply. Neither it nor
+`CB_CONVERSATION.submit_turn` commits; transaction boundaries belong to the caller.
 
 Chat responses are expected to fit in `CB_CHATBOT_CONVERSATIONS.MESSAGE`, which
 is `VARCHAR2(8000 CHAR)`. `CB_AGENT.get_text_response` logs and raises an error
@@ -117,8 +118,8 @@ through `CB_TOOL_RUNNER`. That path is not the current Phase 1 testing focus.
 | Topic | Decision |
 | --- | --- |
 | Scope | Multiple chatbot proof of concept with one conversation thread per bot. |
-| Caller | APEX or another caller invokes `CB_AGENT` after saving the user question in the database. |
-| Chat persistence | `CB_AGENT.get_text_response` only returns the model response. It does not insert messages. |
+| Caller | APEX or another caller invokes `CB_CONVERSATION.submit_turn` to save a user question and its response. |
+| Chat persistence | `CB_AGENT.get_text_response` only returns the model response; `CB_CONVERSATION.submit_turn` inserts user and assistant messages. |
 | Conversation ordering | `ID` order is good enough for the POC. |
 | Users | Multiple users are out of scope for Phase 1. |
 | Providers | Calls can route through Claude or OpenAI-compatible providers such as Novita. |
@@ -129,7 +130,7 @@ through `CB_TOOL_RUNNER`. That path is not the current Phase 1 testing focus.
 | Message vectorization | Every message role is vectorized, including user and assistant rows. |
 | Embedding failures | Embedding failures are logged to `CB_LOGS` and do not block conversation message DML. |
 | Update behavior | Updating a message updates its vector through the trigger. It does not call the LLM or create another assistant response. |
-| Assistant persistence | The caller inserts the assistant message after `CB_AGENT.get_text_response`. |
+| Assistant persistence | `CB_CONVERSATION.submit_turn` inserts the assistant message after `CB_AGENT.get_text_response`. |
 | Conversation memory input | Memory recall uses the saved/current message embedding provided through `p_current_message_id`. |
 | Conversation memory source | Memory recall retrieves only summarized rows, while all unsummarized rows stay in live history. |
 | Summary ownership | `CB_AGENT.create_summary` owns summary creation because it is not an ordinary page DML process. |

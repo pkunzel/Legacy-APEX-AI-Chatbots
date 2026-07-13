@@ -12,6 +12,7 @@ prompt Installing AI chatbot database objects
 @@tables/cb_chatbot_images.sql
 @@tables/cb_ai_models.sql
 @@tables/cb_chatbot_conversations.sql
+@@tables/cb_chatbot_archives.sql
 @@tables/cb_tools.sql
 @@tables/cb_logs.sql
 
@@ -24,6 +25,7 @@ prompt Installing AI chatbot database objects
 @@packages/cb_adapter_claude.sql
 @@packages/cb_memory.sql
 @@packages/cb_tool_runner.sql
+@@packages/cb_conversation.sql
 @@packages/cb_agent.sql
 
 @@"type bodies/cb_openai_provider_t.plb"
@@ -34,6 +36,7 @@ prompt Installing AI chatbot database objects
 @@"package bodies/cb_adapter_claude.plb"
 @@"package bodies/cb_memory.plb"
 @@"package bodies/cb_tool_runner.plb"
+@@"package bodies/cb_conversation.plb"
 @@"package bodies/cb_agent.plb"
 
 @@triggers/cb_chatbot_conversations_biu.sql
@@ -54,6 +57,7 @@ select object_type,
        'CB_CHATBOT_IMAGES',
        'CB_AI_MODELS',
        'CB_CHATBOT_CONVERSATIONS',
+       'CB_CHATBOT_ARCHIVES',
        'CB_TOOLS',
        'CB_LOGS',
        'CB_PROVIDER_T',
@@ -64,6 +68,7 @@ select object_type,
        'CB_ADAPTER_CLAUDE',
        'CB_MEMORY',
        'CB_TOOL_RUNNER',
+       'CB_CONVERSATION',
        'CB_AGENT',
        'CB_CHATBOT_CONVERSATIONS_BIU',
        'CB_CHATBOT_IMAGES_BIU')
@@ -91,6 +96,7 @@ select name,
        'CB_ADAPTER_CLAUDE',
        'CB_MEMORY',
        'CB_TOOL_RUNNER',
+       'CB_CONVERSATION',
        'CB_AGENT',
        'CB_CHATBOT_CONVERSATIONS_BIU',
        'CB_CHATBOT_IMAGES_BIU')
@@ -108,6 +114,7 @@ begin
            'CB_CHATBOT_IMAGES',
            'CB_AI_MODELS',
            'CB_CHATBOT_CONVERSATIONS',
+           'CB_CHATBOT_ARCHIVES',
            'CB_TOOLS',
            'CB_LOGS',
            'CB_PROVIDER_T',
@@ -118,6 +125,7 @@ begin
            'CB_ADAPTER_CLAUDE',
            'CB_MEMORY',
            'CB_TOOL_RUNNER',
+           'CB_CONVERSATION',
            'CB_AGENT',
            'CB_CHATBOT_CONVERSATIONS_BIU',
            'CB_CHATBOT_IMAGES_BIU')

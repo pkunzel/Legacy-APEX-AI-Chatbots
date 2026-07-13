@@ -24,8 +24,8 @@ APEX is expected to own:
 - AI model CRUD.
 - Conversation message CRUD.
 - Chat page model selection.
-- User-message insert before calling `CB_AGENT`.
-- Assistant-message insert after `CB_AGENT.get_text_response`.
+- Chat page call to `CB_CONVERSATION.submit_turn` for a new user message or an
+  additional response for the latest user message.
 - Summary button or process calling `CB_AGENT.create_summary`.
 - Screen refresh and error display.
 

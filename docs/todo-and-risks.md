@@ -9,6 +9,10 @@
 - Test that a simulated embedding failure writes to `CB_LOGS`, leaves
   `MESSAGE_EMBEDDING` null, and does not block conversation message DML.
 - Test `CB_AGENT.create_summary` end to end after the chat flow has enough rows to summarize.
+- Test `CB_CONVERSATION.archive_chat` and `CB_CONVERSATION.clear_conversation`
+  end to end, including rollback behavior and summary reset.
+- Test `CB_CONVERSATION.submit_turn` for new-message, blank-message response,
+  and provider-error rollback behavior.
 - Add a minimal smoke-test script for the current Phase 1 flow when the package APIs settle.
 
 ## Known Risks
