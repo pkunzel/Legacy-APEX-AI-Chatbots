@@ -4,7 +4,7 @@
  *              or clearing a chatbot's live transcript.
  * @module cb_conversation
  * @dependencies cb_agent, cb_chatbots, cb_chatbot_conversations,
- *               cb_chatbot_archives, APEX_DEBUG
+ *               cb_chatbot_archives, cb_chatbot_images, APEX_DEBUG
  * @notes The package does not commit. The APEX caller owns the transaction.
  */
 create or replace package cb_conversation as
@@ -29,6 +29,19 @@ create or replace package cb_conversation as
       p_max_tokens           in number default null,
       p_max_tool_steps       in number default null
    );
+
+   /**
+    * @function get_current_image_blob
+    * @description Returns the chatbot image whose definition is semantically
+    *              closest to the latest assistant response. Returns the
+    *              chatbot display image when no suitable image is available
+    *              or when the semantic lookup fails.
+    * @param p_chatbot_id Chatbot identifier from cb_chatbots.
+    * @returns Selected image BLOB, chatbot display image fallback, or null.
+    */
+   function get_current_image_blob (
+      p_chatbot_id in cb_chatbots.id%type
+   ) return cb_chatbots.image%type;
 
    /**
     * @procedure archive_chat

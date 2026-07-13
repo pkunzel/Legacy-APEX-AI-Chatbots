@@ -10,7 +10,9 @@ The mature version should support:
 - Multiple configurable chatbots.
 - Runtime model selection or bot-level model defaults.
 - Long conversations through summary plus vector recall to improve quality of data based on the user's question.
-- Image to text comparison (eg.: User asks for a product)
+- Stronger semantic image-selection rules, such as relevance thresholds or
+  user-message/product-aware selection. The current latest-assistant-reply
+  matching is implemented for the demonstration.
 - Optional read-only tools for agent behavior.
 - APEX screens for chatbot CRUD, model configuration, conversations, summary
   actions, and chat interaction.
@@ -26,6 +28,8 @@ APEX is expected to own:
 - Chat page model selection.
 - Chat page call to `CB_CONVERSATION.submit_turn` for a new user message or an
   additional response for the latest user message.
+- BLOB image item query using `CB_CONVERSATION.get_current_image_blob` after a
+  chat response is saved.
 - Summary button or process calling `CB_AGENT.create_summary`.
 - Screen refresh and error display.
 
@@ -47,6 +51,8 @@ Future hardening should revisit:
 Future memory improvements may include:
 
 - Adding a vector index when recall volume requires it.
+- Adding a cosine vector index for image-definition search when a chatbot owns
+  enough images for the current filtered scan to become slow.
 - Separating summary memory from raw recalled message memory if summary quality
   becomes noisy.
 

@@ -10,20 +10,27 @@ The project stores:
 - conversation messages and embeddings
 - optional chatbot-specific tools
 
-It exposes one main facade package, `CB_AGENT`, which routes a request to either an OpenAI-compatible adapter or an Anthropic/Claude-compatible adapter.
+It exposes `CB_AGENT` for provider-backed responses and `CB_CONVERSATION` for
+conversation lifecycle actions such as submitting a turn, archiving, clearing,
+and selecting a contextual display image.
 
 ## What This Project Does
 
 The current design is intentionally provider-neutral:
 
-1. The APEX app saves the user message to `CB_CHATBOT_CONVERSATIONS`.
-2. The app calls `CB_AGENT` with either a model configuration row or direct provider details.
+1. The APEX app calls `CB_CONVERSATION.submit_turn` with a message, or a blank
+   message to regenerate a response for the latest user message.
+2. `CB_CONVERSATION` saves a supplied user message and calls `CB_AGENT` with a
+   model configuration row.
 3. `CB_AGENT` loads the bot prompt, current summary, unsummarized history, and recalled summarized messages.
 4. If tools are enabled for the bot, `CB_AGENT` can enter a bounded tool loop through `CB_TOOL_RUNNER`.
 5. The provider subtype delegates request construction and HTTP execution to `CB_ADAPTER_OPENAI` or `CB_ADAPTER_CLAUDE`.
 6. `CB_AGENT.get_text_response` returns assistant text only.
-7. The APEX app inserts the assistant message after the call.
-8. `CB_AGENT.create_summary` summarizes older conversation rows and appends the raw summary to `CB_CHATBOTS.CURRENT_SUMMARY`.
+7. `CB_CONVERSATION` saves the assistant message after the call.
+8. An APEX BLOB item can retrieve the image whose definition is closest to the
+   latest assistant reply through `CB_CONVERSATION.get_current_image_blob`.
+   It falls back to the chatbot display image.
+9. `CB_AGENT.create_summary` summarizes older conversation rows and appends the raw summary to `CB_CHATBOTS.CURRENT_SUMMARY`.
 
 ## Repository Layout
 
@@ -44,11 +51,13 @@ Key objects:
 | `CB_CHATBOT_IMAGES` | Stores chatbot-owned images, image definitions, and definition embeddings for searchable product context. |
 | `CB_AI_MODELS` | Stores provider URL, API key, model name, signature type, and optional default token limit. |
 | `CB_CHATBOT_CONVERSATIONS` | Stores conversation messages, role, embedding, summary flag, and timestamps. |
+| `CB_CHATBOT_ARCHIVES` | Stores complete transcript snapshots as JSON, with chatbot prompt and name snapshots. |
 | `CB_TOOLS` | Stores chatbot-owned tool definitions exposed to the LLM. |
 | `CB_PROVIDER_T` | Abstract provider contract used for polymorphic dispatch. |
 | `CB_OPENAI_PROVIDER_T` | Concrete OpenAI-compatible provider subtype. |
 | `CB_CLAUDE_PROVIDER_T` | Concrete Anthropic/Claude provider subtype. |
 | `CB_AGENT` | Public facade for chat responses and summaries. |
+| `CB_CONVERSATION` | Conversation lifecycle facade for submit/regenerate, archive, clear, and contextual BLOB image retrieval. |
 | `CB_AGENT_UTIL` | Shared validation, JSON, and HTTP helper package. |
 | `CB_MEMORY` | Embedding and semantic recall helpers. |
 | `CB_TOOL_RUNNER` | Tool registry and execution facade. |
@@ -59,7 +68,9 @@ Key objects:
 
 ### Chat
 
-`CB_AGENT.get_text_response` expects the current saved user-message row ID, not just raw text. It uses that row to load the current embedding for memory recall, then assembles the request context in this order:
+`CB_CONVERSATION.submit_turn` saves or locates the current user-message row, then
+calls `CB_AGENT.get_text_response`. The agent uses that row's embedding for
+memory recall and assembles the request context in this order:
 
 1. `CB_CHATBOTS.PROMPT`
 2. `CB_CHATBOTS.CURRENT_SUMMARY`
@@ -78,30 +89,22 @@ When tools are enabled for a bot, `CB_AGENT` adds a simple JSON contract to the 
 
 The usual APEX flow is:
 
-1. Insert the user message into `CB_CHATBOT_CONVERSATIONS`.
-2. Call `CB_AGENT.get_text_response`.
-3. Insert the assistant message returned by the function.
-4. Refresh the chat region.
+1. Call `CB_CONVERSATION.submit_turn`.
+2. Refresh the chat and image regions.
 
 Typical calls use either a saved model row or direct provider details:
 
 ```sql
-CB_AGENT.get_text_response(
-   p_model_id           => :PXX_MODEL_ID,
-   p_bot_id             => :PXX_BOT_ID,
-   p_current_message_id => :PXX_MESSAGE_ID
+CB_CONVERSATION.submit_turn(
+   p_model_id   => :PXX_MODEL_ID,
+   p_chatbot_id => :PXX_CHATBOT_ID,
+   p_user_message => :PXX_MESSAGE
 );
 ```
 
 ```sql
-CB_AGENT.get_text_response(
-   p_signature_type     => 'OPENAI_COMPATIBLE',
-   p_url                => :PXX_URL,
-   p_api_key            => :PXX_API_KEY,
-   p_model              => :PXX_MODEL,
-   p_bot_id             => :PXX_BOT_ID,
-   p_current_message_id => :PXX_MESSAGE_ID
-);
+select cb_conversation.get_current_image_blob(:PXX_CHATBOT_ID) as image
+from dual;
 ```
 
 ## Install Order
@@ -112,26 +115,30 @@ Use `database objects/install.sql` to load the objects in dependency order:
 2. `tables/cb_chatbot_images.sql`
 3. `tables/cb_ai_models.sql`
 4. `tables/cb_chatbot_conversations.sql`
-5. `tables/cb_tools.sql`
-6. `types/cb_provider_t.sql`
-7. `types/cb_openai_provider_t.sql`
-8. `types/cb_claude_provider_t.sql`
-9. `packages/cb_agent_util.sql`
-10. `packages/cb_adapter_openai.sql`
-11. `packages/cb_adapter_claude.sql`
-12. `packages/cb_memory.sql`
-13. `packages/cb_tool_runner.sql`
-14. `packages/cb_agent.sql`
-15. `type bodies/cb_openai_provider_t.plb`
-16. `type bodies/cb_claude_provider_t.plb`
-17. `package bodies/cb_agent_util.plb`
-18. `package bodies/cb_adapter_openai.plb`
-19. `package bodies/cb_adapter_claude.plb`
-20. `package bodies/cb_memory.plb`
-21. `package bodies/cb_tool_runner.plb`
-22. `package bodies/cb_agent.plb`
-23. `triggers/cb_chatbot_conversations_biu.sql`
-24. `triggers/cb_chatbot_images_biu.sql`
+5. `tables/cb_chatbot_archives.sql`
+6. `tables/cb_tools.sql`
+7. `tables/cb_logs.sql`
+8. `types/cb_provider_t.sql`
+9. `types/cb_openai_provider_t.sql`
+10. `types/cb_claude_provider_t.sql`
+11. `packages/cb_agent_util.sql`
+12. `packages/cb_adapter_openai.sql`
+13. `packages/cb_adapter_claude.sql`
+14. `packages/cb_memory.sql`
+15. `packages/cb_tool_runner.sql`
+16. `packages/cb_conversation.sql`
+17. `packages/cb_agent.sql`
+18. `type bodies/cb_openai_provider_t.plb`
+19. `type bodies/cb_claude_provider_t.plb`
+20. `package bodies/cb_agent_util.plb`
+21. `package bodies/cb_adapter_openai.plb`
+22. `package bodies/cb_adapter_claude.plb`
+23. `package bodies/cb_memory.plb`
+24. `package bodies/cb_tool_runner.plb`
+25. `package bodies/cb_conversation.plb`
+26. `package bodies/cb_agent.plb`
+27. `triggers/cb_chatbot_conversations_biu.sql`
+28. `triggers/cb_chatbot_images_biu.sql`
 
 ## Dependencies
 
@@ -149,7 +156,9 @@ The embedding helper uses the APEX AI service static ID `db_onnx_model`.
 ## Notes
 
 - The project is scoped to one chatbot proof of concept for one APEX application.
-- `CB_AGENT` does not insert assistant messages; the caller owns that step.
+- `CB_AGENT` does not insert assistant messages directly; `CB_CONVERSATION.submit_turn` owns chat-turn persistence.
+- Archive and clear are intentionally separate operations: archiving is non-destructive.
+- Semantic image selection compares the latest assistant reply with image-definition embeddings using cosine distance; it falls back to `CB_CHATBOTS.IMAGE`.
 - Conversation memory is based on summarized rows only.
 - Message embeddings are maintained by trigger, not by the provider adapters.
 - `CB_AI_MODELS.API_KEY` stores the raw secret, and the packages format provider-specific headers at runtime.
@@ -157,7 +166,8 @@ The embedding helper uses the APEX AI service static ID `db_onnx_model`.
 
 ## Known Gaps
 
-- Vector dimensions are still flexible in `CB_CHATBOT_CONVERSATIONS.MESSAGE_EMBEDDING`.
+- The fixed `vector(384, float32)` embedding columns require the configured
+  embedding service to continue returning compatible vectors.
 - Network ACL, wallet, and certificate setup are not documented here yet.
 - SQL export packaging and Liquibase support are not part of this repository snapshot.
 

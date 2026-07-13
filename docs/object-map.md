@@ -22,7 +22,7 @@
 | `CB_ADAPTER_CLAUDE` | `packages/cb_adapter_claude.sql` | Anthropic/Claude-compatible payload, request, and response parsing API. |
 | `CB_MEMORY` | `packages/cb_memory.sql` | Conversation memory helper API using the APEX AI service static ID `db_onnx_model` to embed messages, log embedding failures, and recall summarized messages. |
 | `CB_TOOL_RUNNER` | `packages/cb_tool_runner.sql` | Tool registry and execution API for optional agent behavior. |
-| `CB_CONVERSATION` | `packages/cb_conversation.sql` | Conversation lifecycle API for submitting or regenerating a chat turn, archiving a live transcript, or clearing it without an archive. |
+| `CB_CONVERSATION` | `packages/cb_conversation.sql` | Conversation lifecycle API for submitting or regenerating a chat turn, retrieving the closest chatbot image for the latest assistant reply, archiving a live transcript, or clearing it without an archive. |
 
 ## Package Bodies
 
@@ -34,7 +34,7 @@
 | `CB_ADAPTER_CLAUDE` | `package bodies/cb_adapter_claude.plb` | Builds Anthropic Messages API payloads and extracts assistant text. |
 | `CB_MEMORY` | `package bodies/cb_memory.plb` | Calls `APEX_AI.GET_VECTOR_EMBEDDINGS` for nonblank message text, logs embedding failures to `CB_LOGS`, and recalls relevant summarized messages. |
 | `CB_TOOL_RUNNER` | `package bodies/cb_tool_runner.plb` | Checks enabled tools, emits tool instructions, and executes agent-invoked conversation memory lookups. |
-| `CB_CONVERSATION` | `package bodies/cb_conversation.plb` | Persists complete chat turns or replacement replies, creates archive snapshots without changing live data, and separately clears live conversation rows and resets the running summary. |
+| `CB_CONVERSATION` | `package bodies/cb_conversation.plb` | Persists complete chat turns or replacement replies, returns the closest chatbot image for the latest assistant reply with a chatbot-image fallback, creates archive snapshots without changing live data, and separately clears live conversation rows and resets the running summary. |
 
 ## Triggers
 

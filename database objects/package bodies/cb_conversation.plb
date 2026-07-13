@@ -4,7 +4,8 @@
  *              archiving, and clearing actions.
  * @module cb_conversation
  * @dependencies cb_agent, cb_chatbots, cb_chatbot_conversations,
- *               cb_chatbot_archives, APEX_DEBUG, DBMS_LOB, DBMS_UTILITY
+ *               cb_chatbot_archives, cb_chatbot_images, APEX_DEBUG, DBMS_LOB,
+ *               DBMS_UTILITY
  * @notes The package does not commit. The caller controls transaction boundaries.
  */
 create or replace package body cb_conversation as
@@ -46,6 +47,22 @@ create or replace package body cb_conversation as
       return p_message is not null
          and regexp_like(p_message, '[^[:space:]]');
    end is_nonblank;
+
+   function get_chatbot_image (
+      p_chatbot_id in cb_chatbots.id%type
+   ) return cb_chatbots.image%type is
+      l_image cb_chatbots.image%type;
+   begin
+      select image
+        into l_image
+        from cb_chatbots
+       where id = p_chatbot_id;
+
+      return l_image;
+   exception
+      when no_data_found then
+         return null;
+   end get_chatbot_image;
 
    function get_latest_user_message_id (
       p_chatbot_id in number
@@ -145,6 +162,47 @@ create or replace package body cb_conversation as
          );
          raise;
    end submit_turn;
+
+   function get_current_image_blob (
+      p_chatbot_id in cb_chatbots.id%type
+   ) return cb_chatbots.image%type is
+      l_image cb_chatbots.image%type;
+   begin
+      select image
+        into l_image
+        from (
+           select i.image
+             from cb_chatbot_images i
+             cross join (
+                select message_embedding
+                  from (
+                     select message_embedding
+                       from cb_chatbot_conversations
+                      where chatbot_id = p_chatbot_id
+                        and lower(role) = 'assistant'
+                        and message_embedding is not null
+                      order by created desc,
+                               id desc
+                  )
+                 where rownum = 1
+             ) r
+            where i.chatbot_id = p_chatbot_id
+              and i.image_definition_embedding is not null
+            order by i.image_definition_embedding <=> r.message_embedding
+        )
+       where rownum = 1;
+
+      return l_image;
+   exception
+      when no_data_found then
+         return get_chatbot_image(p_chatbot_id);
+      when others then
+         apex_debug.error(
+            'Unexpected error in cb_conversation.get_current_image_blob: '
+            || dbms_utility.format_error_stack
+         );
+         return get_chatbot_image(p_chatbot_id);
+   end get_current_image_blob;
 
    procedure archive_chat (
       p_id_chat_bot in number

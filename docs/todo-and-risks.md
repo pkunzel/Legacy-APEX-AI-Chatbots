@@ -10,9 +10,12 @@
   `MESSAGE_EMBEDDING` null, and does not block conversation message DML.
 - Test `CB_AGENT.create_summary` end to end after the chat flow has enough rows to summarize.
 - Test `CB_CONVERSATION.archive_chat` and `CB_CONVERSATION.clear_conversation`
-  end to end, including rollback behavior and summary reset.
+  rollback behavior and summary reset. Archive must remain non-destructive.
 - Test `CB_CONVERSATION.submit_turn` for new-message, blank-message response,
   and provider-error rollback behavior.
+- Test semantic image selection with a missing assistant embedding, no image
+  definitions, and a missing chatbot display image; each case should yield the
+  defined fallback or null without breaking page rendering.
 - Add a minimal smoke-test script for the current Phase 1 flow when the package APIs settle.
 
 ## Known Risks
@@ -21,6 +24,8 @@
 - Conversation `MESSAGE` is `VARCHAR2(8000 CHAR)`. Chat responses over this limit are logged and rejected; summaries remain `CLOB`.
 - Every message insert or update calls the embedding service through a row-level trigger. Bulk message repair or imports may be slow.
 - No vector index exists yet, so summarized-memory recall is acceptable only for POC-scale data.
+- No image-definition vector index exists yet. The semantic image lookup filters
+  by chatbot first, which is suitable for the small demonstration image set.
 - `CB_LOGS` writes are part of the caller transaction. A full caller rollback also rolls back the log entry.
 - Tool scaffolding exists, but it is not part of the current tested Phase 1 path.
 
