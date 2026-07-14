@@ -1,9 +1,3 @@
-/**
- * @file cb_chatbot_images_biu.sql
- * @description Maintains image definition embeddings for chatbot image search.
- * @module cb_chatbot_images_biu
- * @dependencies cb_chatbot_images, cb_memory
- */
 create or replace trigger cb_chatbot_images_biu
 before insert or update of image_definition
 on cb_chatbot_images

@@ -882,11 +882,11 @@ create or replace package body cb_agent as
    end get_text_response;
 
    /**
-    * @function create_summary
+    * @procedure create_summary
     * @description Calls an LLM to summarize older unsummarized messages, then
     *              appends the raw summary and flags included rows.
     */
-   function create_summary (
+   procedure create_summary (
       p_signature_type             in varchar2,
       p_url                        in varchar2,
       p_api_key                    in varchar2,
@@ -894,7 +894,7 @@ create or replace package body cb_agent as
       p_bot_id                     in number,
       p_keep_latest_message_count  in number default 10,
       p_max_tokens                 in number default null
-   ) return clob is
+   ) is
       l_signature_type            varchar2(30);
       l_max_tokens                number;
       l_keep_latest_message_count number;
@@ -925,7 +925,7 @@ create or replace package body cb_agent as
       );
 
       if l_max_message_id is null then
-         return null;
+         return;
       end if;
 
       l_summary_prompt := get_summary_prompt(p_bot_id);
@@ -935,7 +935,7 @@ create or replace package body cb_agent as
       );
 
       if l_summary_transcript is null then
-         return null;
+         return;
       end if;
 
       l_provider := create_provider(
@@ -977,7 +977,6 @@ create or replace package body cb_agent as
          p_max_message_id => l_max_message_id
       );
 
-      return l_new_summary;
    exception
       when others then
          apex_debug.error(
@@ -988,22 +987,22 @@ create or replace package body cb_agent as
    end create_summary;
 
    /**
-    * @function create_summary
+    * @procedure create_summary
     * @description Loads model provider details from cb_ai_models, then creates a summary.
     */
-   function create_summary (
+   procedure create_summary (
       p_model_id                   in number,
       p_bot_id                     in number,
       p_keep_latest_message_count  in number default 10,
       p_max_tokens                 in number default null
-   ) return clob is
+   ) is
       l_config         t_ai_model_config;
       l_signature_type varchar2(30);
    begin
       l_config := get_ai_model_config(p_model_id);
       l_signature_type := normalize_signature_type(l_config.signature_type);
 
-      return create_summary(
+      create_summary(
          p_signature_type            => l_signature_type,
          p_url                       => l_config.url,
          p_api_key                   => get_header_api_key(

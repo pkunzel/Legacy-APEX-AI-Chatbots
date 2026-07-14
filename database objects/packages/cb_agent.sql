@@ -73,7 +73,7 @@ create or replace package cb_agent as
    ) return clob;
 
    /**
-    * @function create_summary
+    * @procedure create_summary
     * @description Summarizes older unsummarized conversation rows, appends the
     *              raw model summary to cb_chatbots.current_summary, and marks
     *              summarized rows as summarized.
@@ -84,9 +84,8 @@ create or replace package cb_agent as
     * @param p_bot_id Chatbot identifier from cb_chatbots.
     * @param p_keep_latest_message_count Number of latest unsummarized rows to keep live.
     * @param p_max_tokens Optional maximum response tokens. Defaults by signature type.
-    * @returns CLOB containing the new raw summary text, or null when nothing is eligible.
     */
-   function create_summary (
+   procedure create_summary (
       p_signature_type             in varchar2,
       p_url                        in varchar2,
       p_api_key                    in varchar2,
@@ -94,10 +93,10 @@ create or replace package cb_agent as
       p_bot_id                     in number,
       p_keep_latest_message_count  in number default 10,
       p_max_tokens                 in number default null
-   ) return clob;
+   );
 
    /**
-    * @function create_summary
+    * @procedure create_summary
     * @description Loads provider details from cb_ai_models, summarizes older
     *              conversation rows, appends the raw model summary, and marks
     *              summarized rows as summarized.
@@ -105,14 +104,13 @@ create or replace package cb_agent as
     * @param p_bot_id Chatbot identifier from cb_chatbots.
     * @param p_keep_latest_message_count Number of latest unsummarized rows to keep live.
     * @param p_max_tokens Optional maximum response tokens. Overrides cb_ai_models.max_tokens when provided.
-    * @returns CLOB containing the new raw summary text, or null when nothing is eligible.
     */
-   function create_summary (
+   procedure create_summary (
       p_model_id                   in number,
       p_bot_id                     in number,
       p_keep_latest_message_count  in number default 10,
       p_max_tokens                 in number default null
-   ) return clob;
+   );
 
 end cb_agent;
 /

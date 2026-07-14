@@ -1,3 +1,11 @@
+/**
+ * @file install.sql
+ * @description Installs the chatbot database objects in dependency order.
+ * @module database_install
+ * @dependencies All scripts under database objects
+ * @notes Run with SQLcl or SQL*Plus from this directory so relative script
+ *        references resolve correctly.
+ */
 set define off
 set echo on
 set feedback on

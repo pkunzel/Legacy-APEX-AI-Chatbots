@@ -16,12 +16,14 @@ create or replace type cb_provider_t force as object (
    /**
     * @function get_signature_type
     * @description Returns the normalized signature family implemented by the subtype.
+    * @returns VARCHAR2 provider signature family.
     */
    not instantiable member function get_signature_type return varchar2,
 
    /**
     * @function get_provider_name
     * @description Returns a human-readable provider name for debug and diagnostics.
+    * @returns VARCHAR2 provider display name.
     */
    not instantiable member function get_provider_name return varchar2,
 
@@ -29,6 +31,10 @@ create or replace type cb_provider_t force as object (
     * @function get_text_response
     * @description Provider-specific request execution contract. p_user_message
     *              is optional when p_history_messages already contains the full transcript.
+    * @param p_system_prompt System instructions for the provider request.
+    * @param p_history_messages Conversation history encoded for the provider.
+    * @param p_user_message Current user message when not already in history.
+    * @returns CLOB containing provider response text or response diagnostics.
     */
    not instantiable member function get_text_response (
       p_system_prompt    in clob,

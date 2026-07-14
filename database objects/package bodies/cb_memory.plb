@@ -4,6 +4,8 @@
  * @module cb_memory
  * @dependencies cb_chatbot_conversations, cb_logs, APEX_AI, APEX_DEBUG,
  *               DBMS_UTILITY
+ * @notes Embedding failures are logged and returned as null so callers can
+ *        continue without semantic recall.
  */
 create or replace package body cb_memory as
 

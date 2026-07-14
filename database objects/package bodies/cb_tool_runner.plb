@@ -4,6 +4,7 @@
  * @module cb_tool_runner
  * @dependencies cb_tools, cb_memory, APEX_DEBUG,
  *               DBMS_LOB, DBMS_UTILITY, JSON_OBJECT_T
+ * @notes The current executor exposes read-only conversation-memory lookup.
  */
 create or replace package body cb_tool_runner as
 

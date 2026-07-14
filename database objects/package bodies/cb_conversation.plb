@@ -10,6 +10,10 @@
  */
 create or replace package body cb_conversation as
 
+   /**
+    * @procedure validate_chatbot
+    * @description Validates that a non-null chatbot identifier exists.
+    */
    procedure validate_chatbot (
       p_chatbot_id in number
    ) is
@@ -28,6 +32,10 @@ create or replace package body cb_conversation as
          raise_application_error(-20001, 'Chatbot not found: ' || p_chatbot_id);
    end validate_chatbot;
 
+   /**
+    * @procedure clear_live_conversation
+    * @description Deletes live conversation rows and clears the running summary.
+    */
    procedure clear_live_conversation (
       p_chatbot_id in number
    ) is
@@ -40,6 +48,10 @@ create or replace package body cb_conversation as
        where id = p_chatbot_id;
    end clear_live_conversation;
 
+   /**
+    * @function is_nonblank
+    * @description Returns whether text contains at least one non-whitespace character.
+    */
    function is_nonblank (
       p_message in varchar2
    ) return boolean is
@@ -48,6 +60,10 @@ create or replace package body cb_conversation as
          and regexp_like(p_message, '[^[:space:]]');
    end is_nonblank;
 
+   /**
+    * @function get_chatbot_image
+    * @description Returns the chatbot display image when it exists.
+    */
    function get_chatbot_image (
       p_chatbot_id in cb_chatbots.id%type
    ) return cb_chatbots.image%type is
@@ -64,6 +80,10 @@ create or replace package body cb_conversation as
          return null;
    end get_chatbot_image;
 
+   /**
+    * @function get_latest_user_message_id
+    * @description Returns the newest live user-message identifier for a chatbot.
+    */
    function get_latest_user_message_id (
       p_chatbot_id in number
    ) return cb_chatbot_conversations.id%type is
@@ -89,6 +109,11 @@ create or replace package body cb_conversation as
          );
    end get_latest_user_message_id;
 
+   /**
+    * @procedure generate_and_store_reply
+    * @description Generates an assistant reply through CB_AGENT and stores it as
+    *              the next live conversation row.
+    */
    procedure generate_and_store_reply (
       p_model_id             in cb_ai_models.id%type,
       p_chatbot_id           in cb_chatbots.id%type,
@@ -163,6 +188,11 @@ create or replace package body cb_conversation as
          raise;
    end submit_turn;
 
+   /**
+    * @function get_current_image_blob
+    * @description Selects the image nearest to the latest assistant-response
+    *              embedding, with the chatbot image as fallback.
+    */
    function get_current_image_blob (
       p_chatbot_id in cb_chatbots.id%type
    ) return cb_chatbots.image%type is
@@ -204,6 +234,10 @@ create or replace package body cb_conversation as
          return get_chatbot_image(p_chatbot_id);
    end get_current_image_blob;
 
+   /**
+    * @procedure archive_chat
+    * @description Captures the live conversation and chatbot metadata in one archive row.
+    */
    procedure archive_chat (
       p_id_chat_bot in number
    ) is
@@ -264,6 +298,10 @@ create or replace package body cb_conversation as
          raise;
    end archive_chat;
 
+   /**
+    * @procedure clear_conversation
+    * @description Validates the chatbot and clears its live conversation state.
+    */
    procedure clear_conversation (
       p_chatbot_id in number
    ) is

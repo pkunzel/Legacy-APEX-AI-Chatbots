@@ -1,9 +1,3 @@
-/**
- * @file cb_chatbot_conversations_biu.sql
- * @description Maintains message embeddings for chatbot conversation memory recall.
- * @module cb_chatbot_conversations_biu
- * @dependencies cb_chatbot_conversations, cb_memory
- */
 create or replace trigger cb_chatbot_conversations_biu
 before insert or update of message
 on cb_chatbot_conversations
