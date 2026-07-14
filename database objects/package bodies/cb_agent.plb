@@ -899,6 +899,7 @@ create or replace package body cb_agent as
       l_max_tokens                number;
       l_keep_latest_message_count number;
       l_summary_prompt            clob;
+      l_current_summary           cb_chatbots.current_summary%type;
       l_summary_transcript        clob;
       l_new_summary               clob;
       l_new_summary_sample        varchar2(4000);
@@ -929,6 +930,12 @@ create or replace package body cb_agent as
       end if;
 
       l_summary_prompt := get_summary_prompt(p_bot_id);
+
+      select current_summary
+        into l_current_summary
+        from cb_chatbots
+       where id = p_bot_id;
+
       l_summary_transcript := get_summary_transcript(
          p_bot_id         => p_bot_id,
          p_max_message_id => l_max_message_id
@@ -936,6 +943,28 @@ create or replace package body cb_agent as
 
       if l_summary_transcript is null then
          return;
+      end if;
+
+      if l_current_summary is not null
+      and regexp_like(dbms_lob.substr(l_current_summary, 32767, 1), '[^[:space:]]') then
+         l_summary_transcript :=
+            '<existing_running_summary>'
+            || chr(10)
+            || l_current_summary
+            || chr(10)
+            || '</existing_running_summary>'
+            || chr(10)
+            || chr(10)
+            || '<new_conversation_transcript>'
+            || chr(10)
+            || l_summary_transcript
+            || chr(10)
+            || '</new_conversation_transcript>';
+      else
+         l_summary_transcript :=
+            'New conversation transcript:'
+            || chr(10)
+            || l_summary_transcript;
       end if;
 
       l_provider := create_provider(
