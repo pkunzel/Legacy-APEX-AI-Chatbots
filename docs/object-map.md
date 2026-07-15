@@ -4,7 +4,7 @@
 
 | Object | File | Purpose |
 | --- | --- | --- |
-| `CB_CHATBOTS` | `tables/cb_chatbots.sql` | Stores chatbot definitions, display image metadata, prompts, welcome text, summary prompt, current summary, and created date. |
+| `CB_CHATBOTS` | `tables/cb_chatbots.sql` | Stores chatbot definitions, display image metadata, prompts, welcome text, global context, summary prompt, current summary, and created date. |
 | `CB_CHATBOT_IMAGES` | `tables/cb_chatbot_images.sql` | Stores chatbot-owned images, text definitions, definition embeddings, thumbnail flags, and searchable product context. |
 | `CB_AI_MODELS` | `tables/cb_ai_models.sql` | Stores AI model connection configurations, including signature type, endpoint URL, raw API secret, provider model ID, and optional token limit. |
 | `CB_CHATBOT_CONVERSATIONS` | `tables/cb_chatbot_conversations.sql` | Stores chatbot conversation messages, message role, `VARCHAR2(8000 CHAR)` message text, optional `vector(384, float32)` message embedding, summary status, and created date. |

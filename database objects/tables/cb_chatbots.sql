@@ -18,6 +18,8 @@ create table "CB_CHATBOTS" (
       annotations ( "DESCRIPTION" 'Prompt used to summarize chatbot conversation context.',"DISPLAY" 'Summary Prompt' ),
    "CURRENT_SUMMARY" clob
       annotations ( "DESCRIPTION" 'Current stored summary for the chatbot.',"DISPLAY" 'Current Summary' ),
+   "GLOBAL_CONTEXT" clob
+      annotations ( "DESCRIPTION" 'Additional context to prepend into the conversation. Separated from PROMPT to avoid injecting directly into it',"DISPLAY" 'Global Context' ),
    "CREATED"         date default on null sysdate not null enable annotations ( "DESCRIPTION" 'Date when the chatbot definition was created.'
    ,"DISPLAY" 'Created' ),
    constraint "CB_CHATBOTS_ID_PK" primary key ( "ID" )

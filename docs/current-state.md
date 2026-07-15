@@ -86,9 +86,10 @@ recall.
 Provider context is assembled in this order:
 
 1. Bot system prompt from `CB_CHATBOTS.PROMPT`.
-2. Current summary from `CB_CHATBOTS.CURRENT_SUMMARY`, when present.
-3. Recalled summarized conversation messages, when present.
-4. Unsummarized conversation rows from `CB_CHATBOT_CONVERSATIONS`, including the
+2. Global context from `CB_CHATBOTS.GLOBAL_CONTEXT`, when present.
+3. Current summary from `CB_CHATBOTS.CURRENT_SUMMARY`, when present.
+4. Recalled summarized conversation messages, when present.
+5. Unsummarized conversation rows from `CB_CHATBOT_CONVERSATIONS`, including the
    current user message.
 
 Because the current message is already in the unsummarized transcript,

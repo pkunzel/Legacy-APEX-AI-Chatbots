@@ -194,55 +194,65 @@ create or replace package body cb_agent as
    end validate_chat_response;
 
    /**
-    * @procedure append_context_section
-    * @description Appends named context text to the system prompt.
+    * @function append_context_section
+    * @description Returns system context with an optional named section appended.
     */
-   procedure append_context_section (
-      p_context in out nocopy clob,
+   function append_context_section (
+      p_context in clob,
       p_title   in varchar2,
       p_value   in clob
-   ) is
+   ) return clob is
    begin
       if p_value is null
       or not regexp_like(dbms_lob.substr(p_value, 32767, 1), '[^[:space:]]') then
-         return;
+         return p_context;
       end if;
 
       if p_context is null then
-         p_context := p_title || ':' || chr(10) || p_value;
-      else
-         p_context := p_context || chr(10) || chr(10) || p_title || ':' || chr(10) || p_value;
+         return p_title || ':' || chr(10) || p_value;
       end if;
+
+      return p_context || chr(10) || chr(10) || p_title || ':' || chr(10) || p_value;
    end append_context_section;
 
    /**
     * @function get_system_context
-    * @description Combines the bot prompt, current summary, and recalled older messages.
+    * @description Combines the bot prompt, global context, current summary,
+    *              and recalled older messages.
     */
    function get_system_context (
       p_bot_id            in number,
       p_recalled_messages in clob
    ) return clob is
       l_prompt          cb_chatbots.prompt%type;
+      l_global_context  cb_chatbots.global_context%type;
       l_current_summary cb_chatbots.current_summary%type;
       l_system_context  clob;
    begin
       select prompt,
+             global_context,
              current_summary
         into l_prompt,
+             l_global_context,
              l_current_summary
         from cb_chatbots
        where id = p_bot_id;
 
       l_system_context := l_prompt;
 
-      append_context_section(
+      l_system_context := append_context_section(
+         p_context => l_system_context,
+         p_title   => 'Global context',
+         p_value   => l_global_context
+      );
+
+      l_system_context := append_context_section(
          p_context => l_system_context,
          p_title   => 'Conversation summary',
          p_value   => l_current_summary
       );
 
-      append_context_section(
+      l_system_context := append_context_section(
          p_context => l_system_context,
          p_title   => 'Recalled conversation memory',
          p_value   => p_recalled_messages
@@ -340,11 +350,10 @@ create or replace package body cb_agent as
 
       if l_summary_prompt is null
       or not regexp_like(dbms_lob.substr(l_summary_prompt, 32767, 1), '[^[:space:]]') then
-         l_summary_prompt :=
-            'Summarize the conversation transcript for future chatbot context. '
-            || 'Preserve durable facts, user preferences, decisions, constraints, '
-            || 'open tasks, and details that may help the bot reply consistently. '
-            || 'Ignore filler and transient wording.';
+         raise_application_error(
+            -20001,
+            'Create a summary prompt to use the summary feature'
+         );
       end if;
 
       return l_summary_prompt;

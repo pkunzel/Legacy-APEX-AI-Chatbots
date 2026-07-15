@@ -69,9 +69,10 @@ calls `CB_AGENT.get_text_response`. The agent uses that row's embedding for
 memory recall and assembles the request context in this order:
 
 1. `CB_CHATBOTS.PROMPT`
-2. `CB_CHATBOTS.CURRENT_SUMMARY`
-3. recalled summarized messages
-4. live unsummarized conversation rows
+2. `CB_CHATBOTS.GLOBAL_CONTEXT`, when present
+3. `CB_CHATBOTS.CURRENT_SUMMARY`, when present
+4. recalled summarized messages
+5. live unsummarized conversation rows
 
 ### Summary
 
