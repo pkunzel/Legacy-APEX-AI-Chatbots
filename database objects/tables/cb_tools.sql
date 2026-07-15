@@ -36,6 +36,7 @@ alter table "CB_TOOLS"
    add constraint "CB_TOOLS_CHATBOT_FK"
       foreign key ( "CHATBOT_ID" )
          references "CB_CHATBOTS" ( "ID" )
+         on delete cascade
       enable;
 
 create index "CB_TOOLS_I1" on
