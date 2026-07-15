@@ -22,9 +22,8 @@ when generating future replies.
 - Vector embeddings are saved in `MESSAGE_EMBEDDING` as `vector(384, float32)`
   and used for memory recall, but no vector index is required yet.
 - Chatbot-owned images have text-definition embeddings in
-  `IMAGE_DEFINITION_EMBEDDING`. When configured, a dedicated image-selection
-  model extracts the primary product for a turn, and that concise phrase selects
-  the closest image through cosine vector distance.
+  `IMAGE_DEFINITION_EMBEDDING`. The latest assistant reply can select the
+  closest image for display through cosine vector distance.
 - Multiple end users and multiple conversation threads per bot are out of scope.
   `CHATBOT_ID` represents one conversation thread per bot for this POC.
 - System instructions live only in `CB_CHATBOTS.PROMPT`; system messages are not
@@ -44,9 +43,8 @@ when generating future replies.
   messages into `CB_CHATBOTS.CURRENT_SUMMARY` and mark included rows summarized.
 - A caller can archive a complete live transcript into one
   `CB_CHATBOT_ARCHIVES` row without changing the live conversation.
-- An APEX BLOB item can display the image selected from the latest assistant
-  response's extracted primary-product phrase, with `CB_CHATBOTS.IMAGE` as its
-  fallback.
+- An APEX BLOB item can display the image semantically closest to the latest
+  assistant response, with `CB_CHATBOTS.IMAGE` as its fallback.
 
 ## Runtime Chat Flow
 
@@ -64,16 +62,12 @@ when generating future replies.
    memory, and unsummarized conversation rows.
 7. `CB_AGENT` creates a provider subtype and returns the assistant text.
 8. `CB_CONVERSATION` saves the assistant reply to `CB_CHATBOT_CONVERSATIONS`.
-9. When `IMAGE_SELECTION_MODEL_ID` is configured, `CB_AGENT.get_image_search_term`
-   uses `IMAGE_SELECTION_PROMPT` with only the current user message and assistant
-   reply. `CB_CONVERSATION` embeds the extracted phrase, stores it in
-   `IMAGE_SEARCH_TERM`, selects the closest `CB_CHATBOT_IMAGES` definition, and
-   stores its ID in `SELECTED_IMAGE_ID`.
-10. On page render, an APEX BLOB item can call
-    `CB_CONVERSATION.get_current_image_blob(:PXX_CHATBOT_ID)`. The function
-    returns the selected image from the latest assistant response. Missing
-    configuration, extraction failures, no matching image, and lookup errors
-    fall back to `CB_CHATBOTS.IMAGE`.
+9. On page render, an APEX BLOB item can call
+   `CB_CONVERSATION.get_current_image_blob(:PXX_CHATBOT_ID)`. The function
+   uses the latest assistant-message embedding and cosine shorthand (`<=>`) to
+   select the closest `CB_CHATBOT_IMAGES` definition for that chatbot.
+   Missing embeddings, no matching image, and lookup errors fall back to
+   `CB_CHATBOTS.IMAGE`.
 
 `CB_AGENT.get_text_response` does not insert the assistant reply. Neither it nor
 `CB_CONVERSATION.submit_turn` commits; transaction boundaries belong to the caller.
@@ -143,7 +137,7 @@ boundaries.
 | Assistant persistence | `CB_CONVERSATION.submit_turn` inserts the assistant message after `CB_AGENT.get_text_response`. |
 | Archive behavior | `CB_CONVERSATION.archive_chat` snapshots the whole transcript as JSON in `CB_CHATBOT_ARCHIVES`; it does not delete messages or clear the running summary. |
 | Clear behavior | `CB_CONVERSATION.clear_conversation` separately deletes live messages and clears `CURRENT_SUMMARY`; it does not archive first. |
-| Chatbot image display | `CB_CONVERSATION` embeds the extracted primary-product phrase, selects and stores the closest same-chatbot image, and `get_current_image_blob` returns that stored image. It returns `CB_CHATBOTS.IMAGE` when no selected image can be returned. |
+| Chatbot image display | `CB_CONVERSATION.get_current_image_blob` compares the latest assistant embedding to same-chatbot image-definition embeddings with cosine shorthand (`<=>`). It returns `CB_CHATBOTS.IMAGE` when no semantic image can be returned. |
 | Conversation memory input | Memory recall uses the saved/current message embedding provided through `p_current_message_id`. |
 | Conversation memory source | Memory recall retrieves only summarized rows, while all unsummarized rows stay in live history. |
 | Summary ownership | `CB_AGENT.create_summary` owns summary creation because it is not an ordinary page DML process. |

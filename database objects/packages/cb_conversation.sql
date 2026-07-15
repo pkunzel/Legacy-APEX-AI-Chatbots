@@ -30,9 +30,10 @@ create or replace package cb_conversation as
 
    /**
     * @function get_current_image_blob
-    * @description Returns the image selected for the latest assistant response
-    *              from its extracted primary-product phrase. Returns the chatbot
-    *              display image when image selection is unavailable or fails.
+    * @description Returns the chatbot image whose definition is semantically
+    *              closest to the latest assistant response. Returns the
+    *              chatbot display image when no suitable image is available
+    *              or when the semantic lookup fails.
     * @param p_chatbot_id Chatbot identifier from cb_chatbots.
     * @returns Selected image BLOB, chatbot display image fallback, or null.
     */

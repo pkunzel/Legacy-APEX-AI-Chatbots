@@ -4,10 +4,10 @@
 
 | Object | File | Purpose |
 | --- | --- | --- |
-| `CB_CHATBOTS` | `tables/cb_chatbots.sql` | Stores chatbot definitions, display image metadata, prompts, summary data, and optional image-selection model and prompt configuration. |
+| `CB_CHATBOTS` | `tables/cb_chatbots.sql` | Stores chatbot definitions, display image metadata, prompts, welcome text, global context, summary prompt, current summary, and created date. |
 | `CB_CHATBOT_IMAGES` | `tables/cb_chatbot_images.sql` | Stores chatbot-owned images, text definitions, definition embeddings, thumbnail flags, and searchable product context. |
 | `CB_AI_MODELS` | `tables/cb_ai_models.sql` | Stores AI model connection configurations, including signature type, endpoint URL, raw API secret, provider model ID, and optional token limit. |
-| `CB_CHATBOT_CONVERSATIONS` | `tables/cb_chatbot_conversations.sql` | Stores chatbot conversation messages, message role, `VARCHAR2(8000 CHAR)` message text, optional embeddings, extracted image-search terms, selected image IDs, summary status, and created date. |
+| `CB_CHATBOT_CONVERSATIONS` | `tables/cb_chatbot_conversations.sql` | Stores chatbot conversation messages, message role, `VARCHAR2(8000 CHAR)` message text, optional `vector(384, float32)` message embedding, summary status, and created date. |
 | `CB_CHATBOT_ARCHIVES` | `tables/cb_chatbot_archives.sql` | Stores one complete archived conversation per row as a JSON transcript, with chatbot ID, name, and system-prompt snapshots. |
 | `CB_LOGS` | `tables/cb_logs.sql` | Lightweight dump table for non-blocking proof-of-concept errors, currently embedding failures. |
 
@@ -15,23 +15,23 @@
 
 | Object | File | Purpose |
 | --- | --- | --- |
-| `CB_AGENT` | `packages/cb_agent.sql` | Public facade API for provider-backed text responses, primary-product extraction for image selection, and conversation summaries. |
+| `CB_AGENT` | `packages/cb_agent.sql` | Public facade API for getting provider-backed text responses and creating conversation summaries. |
 | `CB_AGENT_UTIL` | `packages/cb_agent_util.sql` | Shared validation, JSON array/message helpers, and HTTP request helper. |
 | `CB_ADAPTER_OPENAI` | `packages/cb_adapter_openai.sql` | OpenAI-compatible payload, request, and response parsing API. |
 | `CB_ADAPTER_CLAUDE` | `packages/cb_adapter_claude.sql` | Anthropic/Claude-compatible payload, request, and response parsing API. |
 | `CB_MEMORY` | `packages/cb_memory.sql` | Conversation memory helper API using the APEX AI service static ID `db_onnx_model` to embed messages, log embedding failures, and recall summarized messages. |
-| `CB_CONVERSATION` | `packages/cb_conversation.sql` | Conversation lifecycle API for submitting or regenerating a chat turn, retrieving its selected image, archiving a live transcript, or clearing it without an archive. |
+| `CB_CONVERSATION` | `packages/cb_conversation.sql` | Conversation lifecycle API for submitting or regenerating a chat turn, retrieving the closest chatbot image for the latest assistant reply, archiving a live transcript, or clearing it without an archive. |
 
 ## Package Bodies
 
 | Object | File | Purpose |
 | --- | --- | --- |
-| `CB_AGENT` | `package bodies/cb_agent.plb` | Loads optional AI model configuration, normalizes provider signatures, dispatches chat and isolated image-selection requests, and owns summary creation updates. |
+| `CB_AGENT` | `package bodies/cb_agent.plb` | Loads optional AI model configuration, normalizes provider signatures, fetches prompt/history, creates provider subtype, dispatches chat requests, and owns summary creation updates. |
 | `CB_AGENT_UTIL` | `package bodies/cb_agent_util.plb` | Implements shared validation, message parsing/appending, and HTTP POST behavior. |
 | `CB_ADAPTER_OPENAI` | `package bodies/cb_adapter_openai.plb` | Builds OpenAI-compatible chat-completion payloads and extracts assistant text. |
 | `CB_ADAPTER_CLAUDE` | `package bodies/cb_adapter_claude.plb` | Builds Anthropic Messages API payloads and extracts assistant text. |
 | `CB_MEMORY` | `package bodies/cb_memory.plb` | Calls `APEX_AI.GET_VECTOR_EMBEDDINGS` for nonblank message text, logs embedding failures to `CB_LOGS`, and recalls relevant summarized messages. |
-| `CB_CONVERSATION` | `package bodies/cb_conversation.plb` | Persists complete chat turns or replacement replies, selects and persists an image using the extracted primary-product phrase, returns that latest image with a chatbot-image fallback, creates archive snapshots without changing live data, and separately clears live conversation rows and resets the running summary. |
+| `CB_CONVERSATION` | `package bodies/cb_conversation.plb` | Persists complete chat turns or replacement replies, returns the closest chatbot image for the latest assistant reply with a chatbot-image fallback, creates archive snapshots without changing live data, and separately clears live conversation rows and resets the running summary. |
 
 ## Triggers
 
