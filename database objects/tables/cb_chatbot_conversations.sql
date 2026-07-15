@@ -12,6 +12,8 @@ create table "CB_CHATBOT_CONVERSATIONS" (
       annotations ( "DESCRIPTION" 'Embedding associated with the message for conversation memory recall.',"DISPLAY" 'Message Embedding' ),
    "IMAGE_SEARCH_TERM" varchar2(300 char)
       annotations ( "DESCRIPTION" 'Primary product phrase extracted from an assistant response for image selection.',"DISPLAY" 'Image Search Term' ),
+   "IMAGE_SEARCH_TERM_EMBEDDING" vector(384, float32)
+      annotations ( "DESCRIPTION" 'Embedding associated with the image search term for semantic image selection.',"DISPLAY" 'Image Search Term Embedding' ),
    "IS_SUMMARIZED"   varchar2(1 char) default on null 'N' not null enable annotations ( "DESCRIPTION" 'Indicates whether this message has been included in the chatbot running summary.'
    ,"DISPLAY" 'Is Summarized' ),
    "SUMMARIZED_DATE" date

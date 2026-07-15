@@ -4,7 +4,8 @@
  *              or clearing a chatbot's live transcript.
  * @module cb_conversation
  * @dependencies cb_agent, cb_chatbots, cb_chatbot_conversations,
- *               cb_chatbot_archives, cb_chatbot_images, APEX_DEBUG
+ *               cb_chatbot_archives, cb_chatbot_images, cb_logs, cb_memory,
+ *               APEX_DEBUG
  * @notes The package does not commit. The APEX caller owns the transaction.
  */
 create or replace package cb_conversation as
@@ -31,11 +32,9 @@ create or replace package cb_conversation as
    /**
     * @function get_current_image_blob
     * @description Returns the chatbot image whose definition is semantically
-    *              closest to the latest assistant response. Returns the
-    *              chatbot display image when no suitable image is available
-    *              or when the semantic lookup fails.
+    *              closest to the latest assistant image-search term.
     * @param p_chatbot_id Chatbot identifier from cb_chatbots.
-    * @returns Selected image BLOB, chatbot display image fallback, or null.
+    * @returns Selected image BLOB, or null when no eligible image exists or lookup fails.
     */
    function get_current_image_blob (
       p_chatbot_id in cb_chatbots.id%type

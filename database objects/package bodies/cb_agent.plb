@@ -4,7 +4,7 @@
  *              one app-facing API while delegating provider selection to a true
  *              SQL object type hierarchy.
  * @module cb_agent
- * @dependencies cb_ai_models, cb_chatbots, cb_chatbot_conversations, APEX_DEBUG,
+ * @dependencies cb_ai_models, cb_chatbots, cb_chatbot_conversations, cb_logs, APEX_DEBUG,
  *               DBMS_LOB, DBMS_UTILITY, cb_agent_util, cb_memory,
  *               cb_provider_t, cb_openai_provider_t,
  *               cb_claude_provider_t, JSON_OBJECT_T, JSON_ARRAY_T
@@ -587,6 +587,101 @@ create or replace package body cb_agent as
          );
          raise;
    end get_text_response;
+
+   /**
+    * @function get_image_definition
+    * @description Uses the chatbot image-definition prompt and configured image
+    *              model to derive a concise image-search term from an assistant response.
+    */
+   function get_image_definition (
+      p_bot_id             in cb_chatbots.id%type,
+      p_assistant_response in cb_chatbot_conversations.message%type
+   ) return cb_chatbot_conversations.image_search_term%type is
+      l_image_model_id         cb_chatbots.image_llm_model_id%type;
+      l_image_definition_prompt cb_chatbots.image_definition_prompt%type;
+      l_config                 t_ai_model_config;
+      l_signature_type         varchar2(30);
+      l_provider               cb_provider_t;
+      l_response               clob;
+      l_response_sample        varchar2(32767);
+   begin
+      if p_assistant_response is null
+      or not regexp_like(p_assistant_response, '[^[:space:]]') then
+         return null;
+      end if;
+
+      select image_llm_model_id,
+             image_definition_prompt
+        into l_image_model_id,
+             l_image_definition_prompt
+        from cb_chatbots
+       where id = p_bot_id;
+
+      if l_image_definition_prompt is null
+      or not regexp_like(
+         dbms_lob.substr(l_image_definition_prompt, 32767, 1),
+         '[^[:space:]]'
+      ) then
+         raise_application_error(-20001, 'Image definition prompt cannot be null');
+      end if;
+
+      l_config := get_ai_model_config(l_image_model_id);
+      l_signature_type := normalize_signature_type(l_config.signature_type);
+      l_provider := create_provider(
+         p_signature_type => l_signature_type,
+         p_url            => l_config.url,
+         p_api_key        => get_header_api_key(
+                               p_signature_type => l_signature_type,
+                               p_api_key        => l_config.api_key
+                            ),
+         p_model          => l_config.model,
+         p_max_tokens     => nvl(l_config.max_tokens, default_max_tokens(l_signature_type))
+      );
+
+      l_response := l_provider.get_text_response(
+         p_system_prompt    => l_image_definition_prompt,
+         p_history_messages => null,
+         p_user_message     => p_assistant_response
+      );
+
+      l_response_sample := lower(dbms_lob.substr(l_response, 32767, 1));
+      if l_response_sample is null
+      or not regexp_like(l_response_sample, '[^[:space:]]')
+      or l_response_sample like 'error%'
+      or l_response_sample like 'http request failed%'
+      or l_response_sample like 'no response received%' then
+         raise_application_error(-20001, 'Image definition generation failed');
+      end if;
+
+      return dbms_lob.substr(l_response, 300, 1);
+   exception
+      when others then
+         apex_debug.error(
+            'Unexpected error in cb_agent.get_image_definition: '
+            || dbms_utility.format_error_stack
+         );
+
+         begin
+            insert into cb_logs (
+               chatbot_id,
+               error,
+               location
+            ) values (
+               p_bot_id,
+               dbms_utility.format_error_stack
+               || dbms_utility.format_error_backtrace,
+               'cb_agent.get_image_definition'
+            );
+         exception
+            when others then
+               apex_debug.error(
+                  'Unexpected error while logging image-definition failure: '
+                  || dbms_utility.format_error_stack
+               );
+         end;
+
+         return null;
+   end get_image_definition;
 
    /**
     * @procedure create_summary

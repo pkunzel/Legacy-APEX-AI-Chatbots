@@ -10,6 +10,9 @@ create table "CB_CHATBOTS" (
       annotations ( "DESCRIPTION" 'MIME type for the chatbot display image.',"DISPLAY" 'Image MIME Type' ),
    "IMAGE_FILENAME"  varchar2(255 char)
       annotations ( "DESCRIPTION" 'Original filename for the chatbot display image.',"DISPLAY" 'Image Filename' ),
+   "IMAGE_DEFINITION_PROMPT" clob
+      annotations ( "DESCRIPTION" 'Prompt used to extract a concise image-search term from an assistant response.',"DISPLAY" 'Image Definition Prompt' ),
+   "IMAGE_LLM_MODEL_ID" number not null,
    "PROMPT"          clob
       annotations ( "DESCRIPTION" 'Primary system or instruction prompt for the chatbot.',"DISPLAY" 'Prompt' ),
    "WELCOME_MESSAGE" clob

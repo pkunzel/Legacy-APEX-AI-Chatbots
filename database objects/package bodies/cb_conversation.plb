@@ -4,7 +4,8 @@
  *              archiving, and clearing actions.
  * @module cb_conversation
  * @dependencies cb_agent, cb_chatbots, cb_chatbot_conversations,
- *               cb_chatbot_archives, cb_chatbot_images, APEX_DEBUG, DBMS_LOB,
+ *               cb_chatbot_archives, cb_chatbot_images, cb_logs, cb_memory,
+ *               APEX_DEBUG, DBMS_LOB,
  *               DBMS_UTILITY
  * @notes The package does not commit. The caller controls transaction boundaries.
  */
@@ -121,7 +122,9 @@ create or replace package body cb_conversation as
       p_recall_message_count in number,
       p_max_tokens           in number
    ) is
-      l_reply clob;
+      l_reply             clob;
+      l_assistant_message cb_chatbot_conversations.message%type;
+      l_image_search_term cb_chatbot_conversations.image_search_term%type;
    begin
       l_reply := cb_agent.get_text_response(
          p_model_id             => p_model_id,
@@ -131,14 +134,27 @@ create or replace package body cb_conversation as
          p_max_tokens           => p_max_tokens
       );
 
+      l_assistant_message := dbms_lob.substr(l_reply, 8000, 1);
+      l_image_search_term := cb_agent.get_image_definition(
+         p_bot_id             => p_chatbot_id,
+         p_assistant_response => l_assistant_message
+      );
+
       insert into cb_chatbot_conversations (
          chatbot_id,
          role,
-         message
+         message,
+         image_search_term,
+         image_search_term_embedding
       ) values (
          p_chatbot_id,
          'assistant',
-         dbms_lob.substr(l_reply, 8000, 1)
+         l_assistant_message,
+         l_image_search_term,
+         cb_memory.embed_message(
+            p_message    => l_image_search_term,
+            p_chatbot_id => p_chatbot_id
+         )
       );
    end generate_and_store_reply;
 
@@ -186,8 +202,8 @@ create or replace package body cb_conversation as
 
    /**
     * @function get_current_image_blob
-    * @description Selects the image nearest to the latest assistant-response
-    *              embedding, with the chatbot image as fallback.
+    * @description Selects the image nearest to the latest assistant image-search
+    *              term embedding.
     */
    function get_current_image_blob (
       p_chatbot_id in cb_chatbots.id%type
@@ -200,34 +216,53 @@ create or replace package body cb_conversation as
            select i.image
              from cb_chatbot_images i
              cross join (
-                select message_embedding
+                select image_search_term_embedding
                   from (
-                     select message_embedding
+                     select image_search_term_embedding
                        from cb_chatbot_conversations
                       where chatbot_id = p_chatbot_id
                         and lower(role) = 'assistant'
-                        and message_embedding is not null
-                      order by created desc,
-                               id desc
+                        and image_search_term_embedding is not null
+                      order by id desc
                   )
                  where rownum = 1
              ) r
             where i.chatbot_id = p_chatbot_id
               and i.image_definition_embedding is not null
-            order by i.image_definition_embedding <=> r.message_embedding
+            order by i.image_definition_embedding <=> r.image_search_term_embedding
         )
        where rownum = 1;
 
       return l_image;
    exception
       when no_data_found then
-         return get_chatbot_image(p_chatbot_id);
+         return null;
       when others then
          apex_debug.error(
             'Unexpected error in cb_conversation.get_current_image_blob: '
             || dbms_utility.format_error_stack
          );
-         return get_chatbot_image(p_chatbot_id);
+
+         begin
+            insert into cb_logs (
+               chatbot_id,
+               error,
+               location
+            ) values (
+               p_chatbot_id,
+               dbms_utility.format_error_stack
+               || dbms_utility.format_error_backtrace,
+               'cb_conversation.get_current_image_blob'
+            );
+         exception
+            when others then
+               apex_debug.error(
+                  'Unexpected error while logging image-selection failure: '
+                  || dbms_utility.format_error_stack
+               );
+         end;
+
+         return null;
    end get_current_image_blob;
 
    /**

@@ -3,7 +3,7 @@
  * @description Public facade package for routing chatbot requests through a
  *              polymorphic provider object hierarchy.
  * @module cb_agent
- * @dependencies cb_ai_models, cb_chatbots, cb_chatbot_conversations, APEX_DEBUG,
+ * @dependencies cb_ai_models, cb_chatbots, cb_chatbot_conversations, cb_logs, APEX_DEBUG,
  *               cb_agent_util, cb_memory, cb_provider_t,
  *               cb_openai_provider_t, cb_claude_provider_t
  * @notes Migration-safe database object. Supports caller-supplied provider
@@ -66,6 +66,20 @@ create or replace package cb_agent as
       p_recall_message_count in number default 10,
       p_max_tokens           in number default null
    ) return clob;
+
+   /**
+    * @function get_image_definition
+    * @description Uses the chatbot image-definition prompt and configured image
+    *              model to derive a concise image-search term from an assistant
+    *              response. Failures are logged and returned as null.
+    * @param p_bot_id Chatbot identifier from cb_chatbots.
+    * @param p_assistant_response Assistant response from which to derive the term.
+    * @returns Image-search term, or null when the input is blank or generation fails.
+    */
+   function get_image_definition (
+      p_bot_id             in cb_chatbots.id%type,
+      p_assistant_response in cb_chatbot_conversations.message%type
+   ) return cb_chatbot_conversations.image_search_term%type;
 
    /**
     * @procedure create_summary
