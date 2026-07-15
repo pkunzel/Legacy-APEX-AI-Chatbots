@@ -21,7 +21,13 @@ create or replace package body cb_agent as
       max_tokens     cb_ai_models.max_tokens%type
    );
 
+   type t_image_selection_config is record (
+      model_id cb_chatbots.image_selection_model_id%type,
+      prompt   cb_chatbots.image_selection_prompt%type
+   );
+
    gc_message_max_chars constant number := 8000;
+   gc_image_selection_max_tokens constant number := 100;
 
    /**
     * @function normalize_signature_type
@@ -366,6 +372,60 @@ create or replace package body cb_agent as
    end get_summary_prompt;
 
    /**
+    * @function get_image_selection_config
+    * @description Loads the optional model and prompt used for image selection.
+    */
+   function get_image_selection_config (
+      p_bot_id in cb_chatbots.id%type
+   ) return t_image_selection_config is
+      l_config t_image_selection_config;
+   begin
+      select image_selection_model_id,
+             image_selection_prompt
+        into l_config.model_id,
+             l_config.prompt
+        from cb_chatbots
+       where id = p_bot_id;
+
+      return l_config;
+   exception
+      when no_data_found then
+         raise_application_error(-20001, 'Chatbot not found: ' || p_bot_id);
+   end get_image_selection_config;
+
+   /**
+    * @function normalize_image_search_term
+    * @description Removes incidental whitespace and enclosing quote characters
+    *              from the image-selection model response.
+    */
+   function normalize_image_search_term (
+      p_response in clob
+   ) return varchar2 is
+      l_term varchar2(300);
+   begin
+      if p_response is null then
+         return null;
+      end if;
+
+      l_term := dbms_lob.substr(p_response, 300, 1);
+      l_term := regexp_replace(l_term, '[[:cntrl:]]+', ' ');
+      l_term := trim(regexp_replace(l_term, '[[:space:]]+', ' '));
+      l_term := regexp_replace(l_term, '^["''`[:space:]]+|["''`[:space:]]+$');
+
+      if l_term is null
+      or not regexp_like(l_term, '[[:alnum:]]')
+      or regexp_like(
+            l_term,
+            '^(Error:|No response received\.|HTTP request failed\.)',
+            'i'
+         ) then
+         return null;
+      end if;
+
+      return l_term;
+   end normalize_image_search_term;
+
+   /**
     * @function get_summary_max_message_id
     * @description Finds the highest row ID eligible for summarization while
     *              preserving the latest N unsummarized rows.
@@ -587,6 +647,94 @@ create or replace package body cb_agent as
          );
          raise;
    end get_text_response;
+
+   /**
+    * @function get_image_search_term
+    * @description Calls the optional image-selection model with only the current
+    *              user message and assistant reply, then returns a concise
+    *              primary-product phrase for semantic image lookup.
+    */
+   function get_image_search_term (
+      p_bot_id          in cb_chatbots.id%type,
+      p_user_message    in cb_chatbot_conversations.message%type,
+      p_assistant_reply in clob
+   ) return varchar2 is
+      l_selection_config t_image_selection_config;
+      l_model_config     t_ai_model_config;
+      l_signature_type   varchar2(30);
+      l_max_tokens       number;
+      l_input            clob;
+      l_provider         cb_provider_t;
+      l_response         clob;
+   begin
+      l_selection_config := get_image_selection_config(p_bot_id);
+
+      if l_selection_config.model_id is null then
+         return null;
+      end if;
+
+      if l_selection_config.prompt is null
+      or not regexp_like(
+            dbms_lob.substr(l_selection_config.prompt, 32767, 1),
+            '[^[:space:]]'
+         ) then
+         raise_application_error(
+            -20001,
+            'Create an image selection prompt to use image selection.'
+         );
+      end if;
+
+      if p_assistant_reply is null
+      or not regexp_like(dbms_lob.substr(p_assistant_reply, 32767, 1), '[^[:space:]]') then
+         return null;
+      end if;
+
+      l_model_config := get_ai_model_config(l_selection_config.model_id);
+      l_signature_type := normalize_signature_type(l_model_config.signature_type);
+      l_max_tokens := least(
+         nvl(l_model_config.max_tokens, default_max_tokens(l_signature_type)),
+         gc_image_selection_max_tokens
+      );
+
+      l_input :=
+         '<user_message>'
+         || chr(10)
+         || p_user_message
+         || chr(10)
+         || '</user_message>'
+         || chr(10)
+         || '<assistant_reply>'
+         || chr(10)
+         || p_assistant_reply
+         || chr(10)
+         || '</assistant_reply>';
+
+      l_provider := create_provider(
+         p_signature_type => l_signature_type,
+         p_url            => l_model_config.url,
+         p_api_key        => get_header_api_key(
+                                p_signature_type => l_signature_type,
+                                p_api_key        => l_model_config.api_key
+                             ),
+         p_model          => l_model_config.model,
+         p_max_tokens     => l_max_tokens
+      );
+
+      l_response := l_provider.get_text_response(
+         p_system_prompt    => l_selection_config.prompt,
+         p_history_messages => null,
+         p_user_message     => l_input
+      );
+
+      return normalize_image_search_term(l_response);
+   exception
+      when others then
+         apex_debug.error(
+            'Unexpected error in cb_agent.get_image_search_term: '
+            || dbms_utility.format_error_stack
+         );
+         raise;
+   end get_image_search_term;
 
    /**
     * @procedure create_summary

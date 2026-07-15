@@ -68,6 +68,23 @@ create or replace package cb_agent as
    ) return clob;
 
    /**
+    * @function get_image_search_term
+    * @description Uses the chatbot's optional image-selection model and prompt
+    *              to extract a concise primary-product phrase from one chat turn.
+    *              Returns null when image selection is not configured.
+    * @param p_bot_id Chatbot identifier from cb_chatbots.
+    * @param p_user_message Current user message for the chat turn.
+    * @param p_assistant_reply Generated assistant reply for the chat turn.
+    * @returns VARCHAR2 primary image-search phrase, or null when image selection
+    *          is not configured or the provider returns unusable text.
+    */
+   function get_image_search_term (
+      p_bot_id          in cb_chatbots.id%type,
+      p_user_message    in cb_chatbot_conversations.message%type,
+      p_assistant_reply in clob
+   ) return varchar2;
+
+   /**
     * @procedure create_summary
     * @description Summarizes older unsummarized conversation rows, appends the
     *              raw model summary to cb_chatbots.current_summary, and marks

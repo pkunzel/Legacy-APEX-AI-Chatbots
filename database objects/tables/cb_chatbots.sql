@@ -20,6 +20,10 @@ create table "CB_CHATBOTS" (
       annotations ( "DESCRIPTION" 'Current stored summary for the chatbot.',"DISPLAY" 'Current Summary' ),
    "GLOBAL_CONTEXT" clob
       annotations ( "DESCRIPTION" 'Additional context to prepend into the conversation. Separated from PROMPT to avoid injecting directly into it',"DISPLAY" 'Global Context' ),
+   "IMAGE_SELECTION_MODEL_ID" number
+      annotations ( "DESCRIPTION" 'Optional AI model configuration used to extract the primary image-search term from a completed chat turn.',"DISPLAY" 'Image Selection Model' ),
+   "IMAGE_SELECTION_PROMPT" clob
+      annotations ( "DESCRIPTION" 'Instructions for extracting a concise primary-product phrase for image selection.',"DISPLAY" 'Image Selection Prompt' ),
    "CREATED"         date default on null sysdate not null enable annotations ( "DESCRIPTION" 'Date when the chatbot definition was created.'
    ,"DISPLAY" 'Created' ),
    constraint "CB_CHATBOTS_ID_PK" primary key ( "ID" )
@@ -27,3 +31,10 @@ create table "CB_CHATBOTS" (
    constraint "CHATBOTS_NAME_UNQ" unique ( "NAME" )
       using index enable
 ) annotations ( "DESCRIPTION" 'Stores chatbot definitions, display image metadata, and prompt configuration.',"DISPLAY" 'Chatbots' );
+
+alter table "CB_CHATBOTS"
+   add constraint "CB_CHATBOTS_IMG_SEL_MODEL_FK"
+      foreign key ( "IMAGE_SELECTION_MODEL_ID" )
+         references "CB_AI_MODELS" ( "ID" )
+         on delete set null
+      enable;

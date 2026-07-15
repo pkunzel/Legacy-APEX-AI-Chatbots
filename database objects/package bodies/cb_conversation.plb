@@ -3,7 +3,7 @@
  * @description Conversation lifecycle implementation for submitting chat turns,
  *              archiving, and clearing actions.
  * @module cb_conversation
- * @dependencies cb_agent, cb_chatbots, cb_chatbot_conversations,
+ * @dependencies cb_agent, cb_memory, cb_chatbots, cb_chatbot_conversations,
  *               cb_chatbot_archives, cb_chatbot_images, APEX_DEBUG, DBMS_LOB,
  *               DBMS_UTILITY
  * @notes The package does not commit. The caller controls transaction boundaries.
@@ -110,6 +110,69 @@ create or replace package body cb_conversation as
    end get_latest_user_message_id;
 
    /**
+    * @function get_user_message
+    * @description Returns the exact current user message for isolated image selection.
+    */
+   function get_user_message (
+      p_chatbot_id      in cb_chatbots.id%type,
+      p_user_message_id in cb_chatbot_conversations.id%type
+   ) return cb_chatbot_conversations.message%type is
+      l_user_message cb_chatbot_conversations.message%type;
+   begin
+      select message
+        into l_user_message
+        from cb_chatbot_conversations
+       where id = p_user_message_id
+         and chatbot_id = p_chatbot_id
+         and lower(role) = 'user';
+
+      return l_user_message;
+   exception
+      when no_data_found then
+         raise_application_error(
+            -20001,
+            'Current user message not found: ' || p_user_message_id
+         );
+   end get_user_message;
+
+   /**
+    * @function get_selected_image_id
+    * @description Selects the image nearest to an extracted primary-product phrase.
+    */
+   function get_selected_image_id (
+      p_chatbot_id       in cb_chatbots.id%type,
+      p_image_search_term in cb_chatbot_conversations.image_search_term%type
+   ) return cb_chatbot_images.id%type is
+      l_search_embedding cb_chatbot_conversations.message_embedding%type;
+      l_image_id         cb_chatbot_images.id%type;
+   begin
+      l_search_embedding := cb_memory.embed_message(
+         p_message    => p_image_search_term,
+         p_chatbot_id => p_chatbot_id
+      );
+
+      if l_search_embedding is null then
+         return null;
+      end if;
+
+      select id
+        into l_image_id
+        from (
+           select i.id
+             from cb_chatbot_images i
+            where i.chatbot_id = p_chatbot_id
+              and i.image_definition_embedding is not null
+            order by i.image_definition_embedding <=> l_search_embedding
+        )
+       where rownum = 1;
+
+      return l_image_id;
+   exception
+      when no_data_found then
+         return null;
+   end get_selected_image_id;
+
+   /**
     * @procedure generate_and_store_reply
     * @description Generates an assistant reply through CB_AGENT and stores it as
     *              the next live conversation row.
@@ -121,7 +184,11 @@ create or replace package body cb_conversation as
       p_recall_message_count in number,
       p_max_tokens           in number
    ) is
-      l_reply clob;
+      l_reply                clob;
+      l_user_message         cb_chatbot_conversations.message%type;
+      l_assistant_message_id cb_chatbot_conversations.id%type;
+      l_image_search_term    cb_chatbot_conversations.image_search_term%type;
+      l_selected_image_id    cb_chatbot_images.id%type;
    begin
       l_reply := cb_agent.get_text_response(
          p_model_id             => p_model_id,
@@ -139,7 +206,39 @@ create or replace package body cb_conversation as
          p_chatbot_id,
          'assistant',
          dbms_lob.substr(l_reply, 8000, 1)
-      );
+      )
+      returning id into l_assistant_message_id;
+
+      begin
+         l_user_message := get_user_message(
+            p_chatbot_id      => p_chatbot_id,
+            p_user_message_id => p_user_message_id
+         );
+
+         l_image_search_term := cb_agent.get_image_search_term(
+            p_bot_id          => p_chatbot_id,
+            p_user_message    => l_user_message,
+            p_assistant_reply => l_reply
+         );
+
+         if l_image_search_term is not null then
+            l_selected_image_id := get_selected_image_id(
+               p_chatbot_id        => p_chatbot_id,
+               p_image_search_term => l_image_search_term
+            );
+
+            update cb_chatbot_conversations
+               set image_search_term = l_image_search_term,
+                   selected_image_id = l_selected_image_id
+             where id = l_assistant_message_id;
+         end if;
+      exception
+         when others then
+            apex_debug.error(
+               'Unexpected error in cb_conversation.generate_and_store_reply image selection: '
+               || dbms_utility.format_error_stack
+            );
+      end;
    end generate_and_store_reply;
 
    procedure submit_turn (
@@ -186,37 +285,32 @@ create or replace package body cb_conversation as
 
    /**
     * @function get_current_image_blob
-    * @description Selects the image nearest to the latest assistant-response
-    *              embedding, with the chatbot image as fallback.
+    * @description Returns the image selected for the latest assistant response,
+    *              with the chatbot image as fallback.
     */
    function get_current_image_blob (
       p_chatbot_id in cb_chatbots.id%type
    ) return cb_chatbots.image%type is
       l_image cb_chatbots.image%type;
    begin
-      select image
+      select i.image
         into l_image
-        from (
-           select i.image
-             from cb_chatbot_images i
-             cross join (
-                select message_embedding
-                  from (
-                     select message_embedding
-                       from cb_chatbot_conversations
-                      where chatbot_id = p_chatbot_id
-                        and lower(role) = 'assistant'
-                        and message_embedding is not null
-                      order by created desc,
-                               id desc
-                  )
-                 where rownum = 1
-             ) r
-            where i.chatbot_id = p_chatbot_id
-              and i.image_definition_embedding is not null
-            order by i.image_definition_embedding <=> r.message_embedding
-        )
-       where rownum = 1;
+        from cb_chatbot_conversations c
+        join cb_chatbot_images i
+          on i.id = c.selected_image_id
+         and i.chatbot_id = c.chatbot_id
+       where c.id = (
+          select id
+            from (
+               select id
+                 from cb_chatbot_conversations
+                where chatbot_id = p_chatbot_id
+                  and lower(role) = 'assistant'
+                order by created desc,
+                         id desc
+            )
+           where rownum = 1
+       );
 
       return l_image;
    exception
@@ -257,6 +351,8 @@ create or replace package body cb_conversation as
                     'chat_id' value id,
                     'role'    value role,
                     'message' value message,
+                    'image_search_term' value image_search_term,
+                    'selected_image_id' value selected_image_id,
                     'created' value to_char(created, 'yyyy-mm-dd"T"hh24:mi:ss')
                     returning clob
                  )

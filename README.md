@@ -25,9 +25,12 @@ The current design is intentionally provider-neutral:
 4. The provider subtype delegates request construction and HTTP execution to `CB_ADAPTER_OPENAI` or `CB_ADAPTER_CLAUDE`.
 5. `CB_AGENT.get_text_response` returns assistant text only.
 6. `CB_CONVERSATION` saves the assistant message after the call.
-7. An APEX BLOB item can retrieve the image whose definition is closest to the
-   latest assistant reply through `CB_CONVERSATION.get_current_image_blob`.
-   It falls back to the chatbot display image.
+7. When configured, a dedicated image-selection model extracts the primary
+   product from the current user message and assistant reply. The application
+   vector-matches that concise phrase to image definitions, persists the chosen
+   image, and an APEX BLOB item retrieves it through
+   `CB_CONVERSATION.get_current_image_blob`. It falls back to the chatbot
+   display image.
 8. `CB_AGENT.create_summary` summarizes older conversation rows and appends the raw summary to `CB_CHATBOTS.CURRENT_SUMMARY`.
 
 ## Repository Layout
@@ -45,10 +48,10 @@ Key objects:
 
 | Object | Purpose |
 | --- | --- |
-| `CB_CHATBOTS` | Stores chatbot definitions, display image metadata, prompts, welcome text, and running summary text. |
+| `CB_CHATBOTS` | Stores chatbot definitions, display image metadata, prompts, welcome text, running summary text, and optional image-selection configuration. |
 | `CB_CHATBOT_IMAGES` | Stores chatbot-owned images, image definitions, and definition embeddings for searchable product context. |
 | `CB_AI_MODELS` | Stores provider URL, API key, model name, signature type, and optional default token limit. |
-| `CB_CHATBOT_CONVERSATIONS` | Stores conversation messages, role, embedding, summary flag, and timestamps. |
+| `CB_CHATBOT_CONVERSATIONS` | Stores conversation messages, role, embedding, selected image metadata, summary flag, and timestamps. |
 | `CB_CHATBOT_ARCHIVES` | Stores complete transcript snapshots as JSON, with chatbot prompt and name snapshots. |
 | `CB_PROVIDER_T` | Abstract provider contract used for polymorphic dispatch. |
 | `CB_OPENAI_PROVIDER_T` | Concrete OpenAI-compatible provider subtype. |
@@ -73,6 +76,32 @@ memory recall and assembles the request context in this order:
 3. `CB_CHATBOTS.CURRENT_SUMMARY`, when present
 4. recalled summarized messages
 5. live unsummarized conversation rows
+
+### Image Selection
+
+When `CB_CHATBOTS.IMAGE_SELECTION_MODEL_ID` is configured,
+`CB_AGENT.get_image_search_term` calls that model with only the current user
+message and generated assistant reply. It uses `IMAGE_SELECTION_PROMPT` to
+extract a concise primary-product phrase. `CB_CONVERSATION` embeds that phrase,
+stores it in `IMAGE_SEARCH_TERM`, selects the nearest chatbot-owned image, and
+stores its ID in `SELECTED_IMAGE_ID`. An absent configuration or an image
+selection failure leaves the image unset so the default chatbot image is used.
+
+Example configuration:
+
+```sql
+update cb_chatbots
+   set image_selection_model_id = :PXX_IMAGE_SELECTION_MODEL_ID,
+       image_selection_prompt = q'~
+Extract the primary product discussed, recommended, or presented in the chat
+turn. Return only a short, specific noun phrase suitable for semantic image
+search. Prefer the central product over side dishes, ingredients, sauces,
+drinks, preparation methods, and serving suggestions. Word frequency does not
+determine the primary product. When no exact product is stated, infer the most
+likely primary product from the user message and assistant reply.
+~'
+ where id = :PXX_CHATBOT_ID;
+```
 
 ### Summary
 
@@ -118,7 +147,7 @@ The embedding helper uses the APEX AI service static ID `db_onnx_model`.
 - The project is scoped to one chatbot proof of concept for one APEX application.
 - `CB_AGENT` does not insert assistant messages directly; `CB_CONVERSATION.submit_turn` owns chat-turn persistence.
 - Archive and clear are intentionally separate operations: archiving is non-destructive.
-- Semantic image selection compares the latest assistant reply with image-definition embeddings using cosine distance; it falls back to `CB_CHATBOTS.IMAGE`.
+- When configured, semantic image selection embeds the extracted primary-product phrase rather than the full assistant reply, then selects the nearest image definition. It falls back to `CB_CHATBOTS.IMAGE`.
 - Conversation memory is based on summarized rows only.
 - Message embeddings are maintained by trigger, not by the provider adapters.
 - `CB_AI_MODELS.API_KEY` stores the raw secret, and the packages format provider-specific headers at runtime.
