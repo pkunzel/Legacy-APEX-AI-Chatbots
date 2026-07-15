@@ -12,8 +12,6 @@ create table "CB_CHATBOT_CONVERSATIONS" (
       annotations ( "DESCRIPTION" 'Embedding associated with the message for conversation memory recall.',"DISPLAY" 'Message Embedding' ),
    "IMAGE_SEARCH_TERM" varchar2(300 char)
       annotations ( "DESCRIPTION" 'Primary product phrase extracted from an assistant response for image selection.',"DISPLAY" 'Image Search Term' ),
-   "SELECTED_IMAGE_ID" number
-      annotations ( "DESCRIPTION" 'Image selected for the assistant response after primary-product extraction.',"DISPLAY" 'Selected Image' ),
    "IS_SUMMARIZED"   varchar2(1 char) default on null 'N' not null enable annotations ( "DESCRIPTION" 'Indicates whether this message has been included in the chatbot running summary.'
    ,"DISPLAY" 'Is Summarized' ),
    "SUMMARIZED_DATE" date
@@ -34,13 +32,6 @@ alter table "CB_CHATBOT_CONVERSATIONS"
       foreign key ( "CHATBOT_ID" )
          references "CB_CHATBOTS" ( "ID" )
          on delete cascade
-      enable;
-
-alter table "CB_CHATBOT_CONVERSATIONS"
-   add constraint "CB_CHATBOT_CONV_SELECTED_IMG_FK"
-      foreign key ( "SELECTED_IMAGE_ID" )
-         references "CB_CHATBOT_IMAGES" ( "ID" )
-         on delete set null
       enable;
 
 create index "CB_CHATBOT_CONVERSATIONS_I2" on
