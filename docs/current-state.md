@@ -24,8 +24,6 @@ when generating future replies.
 - Chatbot-owned images have text-definition embeddings in
   `IMAGE_DEFINITION_EMBEDDING`. The latest assistant reply can select the
   closest image for display through cosine vector distance.
-- Tool structures exist, but active tool workflows are not part of the current
-  Phase 1 test focus.
 - Multiple end users and multiple conversation threads per bot are out of scope.
   `CHATBOT_ID` represents one conversation thread per bot for this POC.
 - System instructions live only in `CB_CHATBOTS.PROMPT`; system messages are not
@@ -117,14 +115,6 @@ rows.
 
 The package does not commit, so APEX or the caller controls transaction
 boundaries.
-
-## Tool Status
-
-Tool tables and packages exist as scaffolding. Bots with no enabled tools keep
-the normal one-call chat behavior.
-
-If enabled tool rows exist, `CB_AGENT` can enter a bounded JSON tool-calling loop
-through `CB_TOOL_RUNNER`. That path is not the current Phase 1 testing focus.
 
 ## Current Decisions
 

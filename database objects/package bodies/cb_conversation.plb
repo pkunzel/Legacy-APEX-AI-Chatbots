@@ -119,8 +119,7 @@ create or replace package body cb_conversation as
       p_chatbot_id           in cb_chatbots.id%type,
       p_user_message_id      in cb_chatbot_conversations.id%type,
       p_recall_message_count in number,
-      p_max_tokens           in number,
-      p_max_tool_steps       in number
+      p_max_tokens           in number
    ) is
       l_reply clob;
    begin
@@ -129,8 +128,7 @@ create or replace package body cb_conversation as
          p_bot_id               => p_chatbot_id,
          p_current_message_id   => p_user_message_id,
          p_recall_message_count => p_recall_message_count,
-         p_max_tokens           => p_max_tokens,
-         p_max_tool_steps       => p_max_tool_steps
+         p_max_tokens           => p_max_tokens
       );
 
       insert into cb_chatbot_conversations (
@@ -149,8 +147,7 @@ create or replace package body cb_conversation as
       p_chatbot_id           in cb_chatbots.id%type,
       p_user_message         in cb_chatbot_conversations.message%type default null,
       p_recall_message_count in number default 10,
-      p_max_tokens           in number default null,
-      p_max_tool_steps       in number default null
+      p_max_tokens           in number default null
    ) is
       l_user_message_id cb_chatbot_conversations.id%type;
    begin
@@ -176,8 +173,7 @@ create or replace package body cb_conversation as
          p_chatbot_id           => p_chatbot_id,
          p_user_message_id      => l_user_message_id,
          p_recall_message_count => p_recall_message_count,
-         p_max_tokens           => p_max_tokens,
-         p_max_tool_steps       => p_max_tool_steps
+         p_max_tokens           => p_max_tokens
       );
    exception
       when others then

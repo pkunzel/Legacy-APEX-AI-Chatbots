@@ -25,6 +25,5 @@ bot, persist user and assistant messages, summarize older conversation rows into
 memory, and recall summarized memory through vectors. The APEX application layer
 is intentionally not stored here yet.
 
-For the current implementation, tools and raw database-stored credentials are
-accepted proof-of-concept scaffolding rather than production-ready security or
-agent orchestration.
+For the current implementation, raw database-stored credentials are accepted
+proof-of-concept scaffolding rather than production-ready security.

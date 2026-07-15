@@ -19,15 +19,13 @@ create or replace package cb_conversation as
     * @param p_user_message New user message, or null/blank to regenerate.
     * @param p_recall_message_count Number of summarized messages to recall.
     * @param p_max_tokens Optional provider response token limit.
-    * @param p_max_tool_steps Optional maximum agent tool calls.
     */
    procedure submit_turn (
       p_model_id             in cb_ai_models.id%type,
       p_chatbot_id           in cb_chatbots.id%type,
       p_user_message         in cb_chatbot_conversations.message%type default null,
       p_recall_message_count in number default 10,
-      p_max_tokens           in number default null,
-      p_max_tool_steps       in number default null
+      p_max_tokens           in number default null
    );
 
    /**
