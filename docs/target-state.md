@@ -13,7 +13,6 @@ The mature version should support:
 - Stronger semantic image-selection rules, such as relevance thresholds or
   user-message/product-aware selection. The current latest-assistant-reply
   matching is implemented for the demonstration.
-- Optional read-only tools for agent behavior.
 - APEX screens for chatbot CRUD, model configuration, conversations, summary
   actions, and chat interaction.
 - Plain SQL Workshop installation for the proof of concept.
@@ -55,18 +54,6 @@ Future memory improvements may include:
   enough images for the current filtered scan to become slow.
 - Separating summary memory from raw recalled message memory if summary quality
   becomes noisy.
-
-## Future Tooling
-
-The current tool design is scaffolding. A later phase can make tools a central
-feature by:
-
-- Testing the `CONVERSATION_MEMORY` tool path end to end.
-- Adding dedicated tool run and step logging.
-- Adding more read-only tool executors.
-- Considering provider-native tool calling if the JSON contract becomes too
-  brittle.
-- Tuning `MAX_ROWS` and `MAX_RESULT_CHARS`.
 
 ## Future Provider Strategy
 

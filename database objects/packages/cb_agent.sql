@@ -4,7 +4,7 @@
  *              polymorphic provider object hierarchy.
  * @module cb_agent
  * @dependencies cb_ai_models, cb_chatbots, cb_chatbot_conversations, APEX_DEBUG,
- *               cb_agent_util, cb_memory, cb_tool_runner, cb_provider_t,
+ *               cb_agent_util, cb_memory, cb_provider_t,
  *               cb_openai_provider_t, cb_claude_provider_t
  * @notes Migration-safe database object. Supports caller-supplied provider
  *        parameters and model-table lookup through CB_AI_MODELS.
@@ -18,7 +18,6 @@ create or replace package cb_agent as
    -- Provider-specific token defaults used when p_max_tokens is omitted.
    gc_openai_max_tokens constant number := 8000;
    gc_claude_max_tokens constant number := 4000;
-   gc_max_tool_steps    constant number := 5;
 
    /**
     * @function get_text_response
@@ -32,7 +31,6 @@ create or replace package cb_agent as
     * @param p_current_message_id Current saved user-message row from cb_chatbot_conversations.
     * @param p_recall_message_count Number of older summarized messages to recall through conversation memory.
     * @param p_max_tokens Optional maximum response tokens. Defaults by signature type.
-    * @param p_max_tool_steps Maximum tool calls allowed when the bot has tools.
     * @returns CLOB containing assistant text or provider response parse diagnostics.
     *          Chat responses longer than CB_CHATBOT_CONVERSATIONS.MESSAGE are
     *          logged and rejected; summaries remain CLOB-based.
@@ -45,8 +43,7 @@ create or replace package cb_agent as
       p_bot_id               in number,
       p_current_message_id   in number,
       p_recall_message_count in number default 10,
-      p_max_tokens           in number default null,
-      p_max_tool_steps       in number default gc_max_tool_steps
+      p_max_tokens           in number default null
    ) return clob;
 
    /**
@@ -58,7 +55,6 @@ create or replace package cb_agent as
     * @param p_current_message_id Current saved user-message row from cb_chatbot_conversations.
     * @param p_recall_message_count Number of older summarized messages to recall through conversation memory.
     * @param p_max_tokens Optional maximum response tokens. Overrides cb_ai_models.max_tokens when provided.
-    * @param p_max_tool_steps Maximum tool calls allowed when the bot has tools.
     * @returns CLOB containing assistant text or provider response parse diagnostics.
     *          Chat responses longer than CB_CHATBOT_CONVERSATIONS.MESSAGE are
     *          logged and rejected; summaries remain CLOB-based.
@@ -68,8 +64,7 @@ create or replace package cb_agent as
       p_bot_id               in number,
       p_current_message_id   in number,
       p_recall_message_count in number default 10,
-      p_max_tokens           in number default null,
-      p_max_tool_steps       in number default gc_max_tool_steps
+      p_max_tokens           in number default null
    ) return clob;
 
    /**

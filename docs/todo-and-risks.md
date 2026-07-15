@@ -27,7 +27,6 @@
 - No image-definition vector index exists yet. The semantic image lookup filters
   by chatbot first, which is suitable for the small demonstration image set.
 - `CB_LOGS` writes are part of the caller transaction. A full caller rollback also rolls back the log entry.
-- Tool scaffolding exists, but it is not part of the current tested Phase 1 path.
 
 ## Next Chat Restart Notes
 
@@ -38,8 +37,8 @@
   and `CB_MEMORY.embed_message` owns embedding failure logging.
 - The latest non-blocking log design is: `CB_LOGS` has no FK, indexes, or PK and
   currently stores embedding failures only.
-- The next likely validation step is to compile/install in the cloud schema and
-  inspect `USER_ERRORS` for `CB_MEMORY`, `CB_TOOL_RUNNER`, and
+- The next likely validation step is to compile the changed packages in the
+  cloud schema and inspect `USER_ERRORS` for `CB_MEMORY` and
   `CB_CHATBOT_CONVERSATIONS_BIU`.
 
 ## Documentation Watchlist

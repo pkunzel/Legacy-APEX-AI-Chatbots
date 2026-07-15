@@ -6,7 +6,7 @@
  * @module cb_agent
  * @dependencies cb_ai_models, cb_chatbots, cb_chatbot_conversations, APEX_DEBUG,
  *               DBMS_LOB, DBMS_UTILITY, cb_agent_util, cb_memory,
- *               cb_tool_runner, cb_provider_t, cb_openai_provider_t,
+ *               cb_provider_t, cb_openai_provider_t,
  *               cb_claude_provider_t, JSON_OBJECT_T, JSON_ARRAY_T
  * @notes Migration-safe database object. Supports caller-supplied provider
  *        parameters and model-table lookup through CB_AI_MODELS.
@@ -293,31 +293,6 @@ create or replace package body cb_agent as
    end get_current_message_embedding;
 
    /**
-    * @function get_current_message_text
-    * @description Loads the current saved message text for tool fallback queries.
-    */
-   function get_current_message_text (
-      p_bot_id             in number,
-      p_current_message_id in number
-   ) return cb_chatbot_conversations.message%type is
-      l_message cb_chatbot_conversations.message%type;
-   begin
-      select message
-        into l_message
-        from cb_chatbot_conversations
-       where id = p_current_message_id
-         and chatbot_id = p_bot_id;
-
-      return l_message;
-   exception
-      when no_data_found then
-         raise_application_error(
-            -20001,
-            'Current chatbot message not found: ' || p_current_message_id
-         );
-   end get_current_message_text;
-
-   /**
     * @function get_conversation_messages
     * @description Loads unsummarized conversation rows as role/content JSON.
    */
@@ -482,257 +457,6 @@ create or replace package body cb_agent as
    end mark_messages_summarized;
 
    /**
-    * @function get_agent_system_prompt
-    * @description Adds the tool-use JSON contract to the normal system prompt.
-    */
-   function get_agent_system_prompt (
-      p_system_prompt     in clob,
-      p_tool_instructions in clob
-   ) return clob is
-      l_agent_instructions clob;
-      l_agent_prompt       clob;
-   begin
-      l_agent_instructions :=
-         'Agent tool instructions:' || chr(10)
-         || 'Tools are optional. Use a tool only when the current answer needs information not already present in the conversation context. '
-         || 'Only request tools listed below. Respond with exactly one JSON object and no markdown.' || chr(10)
-         || 'To answer directly: {"type":"final","message":"your user-facing answer"}' || chr(10)
-         || 'To call a tool: {"type":"tool_call","tool_name":"tool_name","arguments":{"query":"short focused search question"}}'
-         || chr(10) || chr(10)
-         || 'Available tools:' || chr(10)
-         || p_tool_instructions;
-
-      l_agent_prompt := p_system_prompt;
-      append_context_section(
-         p_context => l_agent_prompt,
-         p_title   => 'Agent instructions',
-         p_value   => l_agent_instructions
-      );
-
-      return l_agent_prompt;
-   end get_agent_system_prompt;
-
-   /**
-    * @function parse_agent_response
-    * @description Parses the model's JSON decision. Returns null for normal text.
-    */
-   function parse_agent_response (
-      p_response in clob
-   ) return json_object_t is
-      l_response_text varchar2(32767);
-      l_response_json json_object_t;
-   begin
-      if p_response is null then
-         return null;
-      end if;
-
-      l_response_text := dbms_lob.substr(p_response, 32767, 1);
-      l_response_text := regexp_replace(
-         l_response_text,
-         '^[[:space:]]*```json[[:space:]]*',
-         '',
-         1,
-         1,
-         'i'
-      );
-      l_response_text := regexp_replace(
-         l_response_text,
-         '^[[:space:]]*```[[:space:]]*',
-         ''
-      );
-      l_response_text := regexp_replace(
-         l_response_text,
-         '[[:space:]]*```[[:space:]]*$',
-         ''
-      );
-
-      l_response_json := json_object_t.parse(l_response_text);
-      return l_response_json;
-   exception
-      when others then
-         apex_debug.message(
-            'cb_agent.parse_agent_response: model returned non-JSON final text: '
-            || sqlerrm
-         );
-         return null;
-   end parse_agent_response;
-
-   /**
-    * @procedure append_agent_message
-    * @description Appends one role/content message to the loop history CLOB.
-    */
-   procedure append_agent_message (
-      p_messages in out nocopy clob,
-      p_role     in varchar2,
-      p_message  in clob
-   ) is
-      l_messages json_array_t;
-   begin
-      l_messages := cb_agent_util.parse_message_array(
-         p_messages     => p_messages,
-         p_context      => 'append_agent_message',
-         p_package_name => 'cb_agent'
-      );
-
-      cb_agent_util.append_message(
-         p_messages => l_messages,
-         p_role     => p_role,
-         p_message  => p_message
-      );
-
-      p_messages := l_messages.to_clob();
-   end append_agent_message;
-
-   /**
-    * @function get_tool_arguments
-    * @description Returns the JSON object arguments from an agent tool-call response.
-    */
-   function get_tool_arguments (
-      p_response_json in json_object_t
-   ) return clob is
-      l_arguments_json json_object_t;
-   begin
-      l_arguments_json := p_response_json.get_object('arguments');
-
-      if l_arguments_json is null then
-         return '{}';
-      end if;
-
-      return l_arguments_json.to_clob();
-   exception
-      when others then
-         raise_application_error(
-            -20003,
-            'Invalid agent tool arguments: ' || sqlerrm
-         );
-   end get_tool_arguments;
-
-   /**
-    * @function get_agent_response
-    * @description Runs the bounded agent loop for bots with enabled tools.
-    */
-   function get_agent_response (
-      p_provider             in cb_provider_t,
-      p_bot_id               in number,
-      p_system_prompt        in clob,
-      p_history_messages     in clob,
-      p_current_message_text in varchar2,
-      p_max_tool_steps       in number
-   ) return clob is
-      l_tool_instructions clob;
-      l_agent_prompt      clob;
-      l_loop_messages     clob;
-      l_model_response    clob;
-      l_response_json     json_object_t;
-      l_response_type     varchar2(30);
-      l_final_message     clob;
-      l_tool_name         varchar2(150);
-      l_tool_arguments    clob;
-      l_tool_result       clob;
-      l_max_tool_steps    number;
-   begin
-      l_tool_instructions := cb_tool_runner.get_tool_instructions(p_bot_id);
-
-      if l_tool_instructions is null then
-         return p_provider.get_text_response(
-            p_system_prompt    => p_system_prompt,
-            p_history_messages => p_history_messages,
-            p_user_message     => null
-         );
-      end if;
-
-      l_max_tool_steps := trunc(nvl(p_max_tool_steps, gc_max_tool_steps));
-
-      if l_max_tool_steps < 0 then
-         raise_application_error(-20001, 'Max tool steps cannot be negative');
-      end if;
-
-      l_agent_prompt := get_agent_system_prompt(
-         p_system_prompt     => p_system_prompt,
-         p_tool_instructions => l_tool_instructions
-      );
-      l_loop_messages := p_history_messages;
-
-      for i in 0 .. l_max_tool_steps loop
-         l_model_response := p_provider.get_text_response(
-            p_system_prompt    => l_agent_prompt,
-            p_history_messages => l_loop_messages,
-            p_user_message     => null
-         );
-
-         l_response_json := parse_agent_response(l_model_response);
-
-         if l_response_json is null then
-            return l_model_response;
-         end if;
-
-         l_response_type := lower(trim(l_response_json.get_string('type')));
-
-         if l_response_type = 'final' then
-            l_final_message := l_response_json.get_string('message');
-
-            if l_final_message is null
-            or not regexp_like(dbms_lob.substr(l_final_message, 32767, 1), '[^[:space:]]') then
-               return l_model_response;
-            end if;
-
-            return l_final_message;
-         elsif l_response_type = 'tool_call' then
-            if i >= l_max_tool_steps then
-               raise_application_error(-20004, 'Maximum agent tool steps reached');
-            end if;
-
-            l_tool_name := l_response_json.get_string('tool_name');
-            l_tool_arguments := get_tool_arguments(l_response_json);
-
-            append_agent_message(
-               p_messages => l_loop_messages,
-               p_role     => 'assistant',
-               p_message  => l_model_response
-            );
-
-            l_tool_result := cb_tool_runner.execute_tool(
-               p_bot_id        => p_bot_id,
-               p_tool_name     => l_tool_name,
-               p_arguments     => l_tool_arguments,
-               p_default_query => p_current_message_text
-            );
-
-            if l_tool_result is null then
-               append_agent_message(
-                  p_messages => l_loop_messages,
-                  p_role     => 'user',
-                  p_message  => 'The requested tool is not available for this bot. '
-                                || 'Return a normal final answer using the existing conversation context. '
-                                || 'Respond only as {"type":"final","message":"..."}'
-               );
-            else
-               append_agent_message(
-                  p_messages => l_loop_messages,
-                  p_role     => 'user',
-                  p_message  => 'Tool result for '
-                                || l_tool_name
-                                || ':'
-                                || chr(10)
-                                || l_tool_result
-                                || chr(10)
-                                || 'Use the tool result to continue. Return final JSON, '
-                                || 'or request another enabled tool only if still necessary.'
-               );
-            end if;
-         else
-            apex_debug.error(
-               'Unsupported agent response type: '
-               || nvl(l_response_type, '<null>')
-            );
-            return l_model_response;
-         end if;
-      end loop;
-
-      raise_application_error(-20004, 'Maximum agent tool steps reached');
-   end get_agent_response;
-
-   /**
     * @function get_text_response
     * @description Builds app context, dispatches through a provider object, and returns text.
     */
@@ -744,8 +468,7 @@ create or replace package body cb_agent as
       p_bot_id               in number,
       p_current_message_id   in number,
       p_recall_message_count in number default 10,
-      p_max_tokens           in number default null,
-      p_max_tool_steps       in number default gc_max_tool_steps
+      p_max_tokens           in number default null
    ) return clob is
       l_signature_type    varchar2(30);
       l_max_tokens        number;
@@ -753,7 +476,6 @@ create or replace package body cb_agent as
       l_history_messages  clob;
       l_recalled_messages clob;
       l_message_embedding cb_chatbot_conversations.message_embedding%type;
-      l_current_message   cb_chatbot_conversations.message%type;
       l_provider          cb_provider_t;
       l_response          clob;
    begin
@@ -798,28 +520,6 @@ create or replace package body cb_agent as
          || l_provider.get_provider_name
       );
 
-      if cb_tool_runner.has_enabled_tools(p_bot_id) then
-         l_current_message := get_current_message_text(
-            p_bot_id             => p_bot_id,
-            p_current_message_id => p_current_message_id
-         );
-
-         l_response := get_agent_response(
-            p_provider             => l_provider,
-            p_bot_id               => p_bot_id,
-            p_system_prompt        => l_system_prompt,
-            p_history_messages     => l_history_messages,
-            p_current_message_text => l_current_message,
-            p_max_tool_steps       => p_max_tool_steps
-         );
-
-         return validate_chat_response(
-            p_response => l_response,
-            p_bot_id   => p_bot_id,
-            p_model    => p_model
-         );
-      end if;
-
       l_response := l_provider.get_text_response(
          p_system_prompt    => l_system_prompt,
          p_history_messages => l_history_messages,
@@ -849,8 +549,7 @@ create or replace package body cb_agent as
       p_bot_id               in number,
       p_current_message_id   in number,
       p_recall_message_count in number default 10,
-      p_max_tokens           in number default null,
-      p_max_tool_steps       in number default gc_max_tool_steps
+      p_max_tokens           in number default null
    ) return clob is
       l_config         t_ai_model_config;
       l_signature_type varchar2(30);
@@ -869,8 +568,7 @@ create or replace package body cb_agent as
          p_bot_id               => p_bot_id,
          p_current_message_id   => p_current_message_id,
          p_recall_message_count => p_recall_message_count,
-         p_max_tokens           => nvl(p_max_tokens, l_config.max_tokens),
-         p_max_tool_steps       => p_max_tool_steps
+         p_max_tokens           => nvl(p_max_tokens, l_config.max_tokens)
       );
    exception
       when others then
