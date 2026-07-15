@@ -1,0 +1,4 @@
+interface:
+  display_name: "SQL and PL/SQL Standards"
+  short_description: "Apply project SQL and PL/SQL design and approval rules."
+  default_prompt: "Use $sql-plsql-standards when writing, reviewing, or changing SQL or PL/SQL for this project."
