@@ -604,6 +604,9 @@ create or replace package body cb_agent as
       l_provider               cb_provider_t;
       l_response               clob;
       l_response_sample        varchar2(32767);
+      l_response_length        number;
+      l_failure_reason         varchar2(100);
+      l_error_details          clob;
    begin
       if p_assistant_response is null
       or not regexp_like(p_assistant_response, '[^[:space:]]') then
@@ -645,20 +648,50 @@ create or replace package body cb_agent as
       );
 
       l_response_sample := lower(dbms_lob.substr(l_response, 32767, 1));
+      l_response_length := dbms_lob.getlength(l_response);
+
       if l_response_sample is null
-      or not regexp_like(l_response_sample, '[^[:space:]]')
-      or l_response_sample like 'error%'
-      or l_response_sample like 'http request failed%'
-      or l_response_sample like 'no response received%' then
-         raise_application_error(-20001, 'Image definition generation failed');
+      or not regexp_like(l_response_sample, '[^[:space:]]') then
+         l_failure_reason := 'blank provider response';
+      elsif l_response_sample like 'error%' then
+         l_failure_reason := 'provider response begins with "error"';
+      elsif l_response_sample like 'http request failed%' then
+         l_failure_reason := 'provider HTTP request failed';
+      elsif l_response_sample like 'no response received%' then
+         l_failure_reason := 'provider returned no response';
+      end if;
+
+      if l_failure_reason is not null then
+         raise_application_error(
+            -20001,
+            'Image definition generation failed: ' || l_failure_reason
+         );
       end if;
 
       return dbms_lob.substr(l_response, 300, 1);
    exception
       when others then
+         l_error_details :=
+            'Image-definition diagnostics:'
+            || chr(10) || 'bot_id=' || nvl(to_char(p_bot_id), '<null>')
+            || chr(10) || 'image_model_id=' || nvl(to_char(l_image_model_id), '<null>')
+            || chr(10) || 'signature_type=' || nvl(l_signature_type, '<null>')
+            || chr(10) || 'model=' || nvl(l_config.model, '<null>')
+            || chr(10) || 'response_length=' || nvl(to_char(l_response_length), '<null>')
+            || chr(10) || 'response_sample=' || nvl(
+               replace(
+                  replace(dbms_lob.substr(l_response, 1000, 1), chr(13), ' '),
+                  chr(10),
+                  ' '
+               ),
+               '<null>'
+            )
+            || chr(10) || 'error_stack=' || dbms_utility.format_error_stack
+            || chr(10) || 'error_backtrace=' || dbms_utility.format_error_backtrace;
+
          apex_debug.error(
             'Unexpected error in cb_agent.get_image_definition: '
-            || dbms_utility.format_error_stack
+            || dbms_lob.substr(l_error_details, 32767, 1)
          );
 
          begin
@@ -668,8 +701,7 @@ create or replace package body cb_agent as
                location
             ) values (
                p_bot_id,
-               dbms_utility.format_error_stack
-               || dbms_utility.format_error_backtrace,
+               l_error_details,
                'cb_agent.get_image_definition'
             );
          exception
