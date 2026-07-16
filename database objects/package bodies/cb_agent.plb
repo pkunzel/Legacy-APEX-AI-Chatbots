@@ -605,6 +605,7 @@ create or replace package body cb_agent as
       l_response               clob;
       l_response_sample        varchar2(32767);
       l_response_length        number;
+      l_effective_max_tokens   number;
       l_failure_reason         varchar2(100);
       l_error_details          clob;
    begin
@@ -630,6 +631,11 @@ create or replace package body cb_agent as
 
       l_config := get_ai_model_config(l_image_model_id);
       l_signature_type := normalize_signature_type(l_config.signature_type);
+      l_effective_max_tokens := nvl(
+         l_config.max_tokens,
+         default_max_tokens(l_signature_type)
+      );
+
       l_provider := create_provider(
          p_signature_type => l_signature_type,
          p_url            => l_config.url,
@@ -638,7 +644,7 @@ create or replace package body cb_agent as
                                p_api_key        => l_config.api_key
                             ),
          p_model          => l_config.model,
-         p_max_tokens     => nvl(l_config.max_tokens, default_max_tokens(l_signature_type))
+         p_max_tokens     => l_effective_max_tokens
       );
 
       l_response := l_provider.get_text_response(
@@ -677,10 +683,12 @@ create or replace package body cb_agent as
             || chr(10) || 'image_model_id=' || nvl(to_char(l_image_model_id), '<null>')
             || chr(10) || 'signature_type=' || nvl(l_signature_type, '<null>')
             || chr(10) || 'model=' || nvl(l_config.model, '<null>')
+            || chr(10) || 'max_tokens=' || nvl(to_char(l_effective_max_tokens), '<null>')
+            || chr(10) || 'assistant_response_length=' || nvl(to_char(length(p_assistant_response)), '<null>')
             || chr(10) || 'response_length=' || nvl(to_char(l_response_length), '<null>')
             || chr(10) || 'response_sample=' || nvl(
                replace(
-                  replace(dbms_lob.substr(l_response, 1000, 1), chr(13), ' '),
+                  replace(dbms_lob.substr(l_response, 4000, 1), chr(13), ' '),
                   chr(10),
                   ' '
                ),

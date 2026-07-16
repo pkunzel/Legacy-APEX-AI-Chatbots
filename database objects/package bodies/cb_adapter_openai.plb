@@ -74,6 +74,20 @@ create or replace package body cb_adapter_openai as
    end build_payload;
 
    /**
+    * @function get_response_diagnostic
+    * @description Returns a bounded raw-response sample with a parsing failure.
+    */
+   function get_response_diagnostic (
+      p_error_message    in varchar2,
+      p_api_response_raw in clob
+   ) return clob is
+   begin
+      return p_error_message
+         || ' Raw response (first 4000 characters): '
+         || nvl(dbms_lob.substr(p_api_response_raw, 4000, 1), '<null>');
+   end get_response_diagnostic;
+
+   /**
     * @function parse_response
     * @description Extracts choices[0].message.content from an OpenAI-compatible response.
     */
@@ -100,13 +114,19 @@ create or replace package body cb_adapter_openai as
             l_message_json_obj := l_choice_json_obj.get_object('message');
 
             if l_message_json_obj is null then
-               return 'Error: No message object found in the response.';
+               return get_response_diagnostic(
+                  p_error_message    => 'Error: No message object found in the response.',
+                  p_api_response_raw => p_api_response_raw
+               );
             end if;
 
             l_assistant_response := l_message_json_obj.get_string('content');
 
             if l_assistant_response is null then
-               return 'Error: No assistant text found in the response.';
+               return get_response_diagnostic(
+                  p_error_message    => 'Error: No assistant text found in the response.',
+                  p_api_response_raw => p_api_response_raw
+               );
             end if;
 
             if dbms_lob.instr(l_assistant_response, '<think>') > 0 then
@@ -123,14 +143,20 @@ create or replace package body cb_adapter_openai as
             return regexp_replace(l_assistant_response, '^[[:space:]]+|[[:space:]]+$');
          end if;
 
-         return 'Error: No choices found in the response.';
+         return get_response_diagnostic(
+            p_error_message    => 'Error: No choices found in the response.',
+            p_api_response_raw => p_api_response_raw
+         );
       exception
          when others then
             apex_debug.message(
                'cb_adapter_openai.parse_response: Error parsing JSON response: '
                || sqlerrm
             );
-            return 'Error parsing JSON response: ' || sqlerrm || ': ' || p_api_response_raw;
+            return get_response_diagnostic(
+               p_error_message    => 'Error parsing JSON response: ' || sqlerrm,
+               p_api_response_raw => p_api_response_raw
+            );
       end;
    end parse_response;
 
