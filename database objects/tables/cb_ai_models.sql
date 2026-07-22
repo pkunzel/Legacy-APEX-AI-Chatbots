@@ -14,6 +14,10 @@ create table "CB_AI_MODELS" (
    ,"DISPLAY" 'Model' ),
    "MAX_TOKENS"     number annotations ( "DESCRIPTION" 'Optional default maximum response tokens for this model configuration.'
    ,"DISPLAY" 'Max Tokens' ),
+   "SORT_ORDER"     number default 99 not null enable annotations ( "DESCRIPTION" 'Display order for this model configuration in chat option lists.'
+   ,"DISPLAY" 'Sort Order' ),
+   "EXCLUDE_FROM_CHAT_OPTION" varchar2(1 char) default 'N' not null enable annotations ( "DESCRIPTION" 'Whether to exclude this model configuration from chat option lists (Y/N).'
+   ,"DISPLAY" 'Exclude From Chat Option' ),
    "CREATED"        date default on null sysdate not null enable annotations ( "DESCRIPTION" 'Date when the model configuration was created.'
    ,"DISPLAY" 'Created' ),
    constraint "CB_AI_MODELS_ID_PK" primary key ( "ID" )
@@ -21,5 +25,7 @@ create table "CB_AI_MODELS" (
    constraint "CB_AI_MODELS_NAME_UNQ" unique ( "NAME" )
       using index enable,
    constraint "CB_AI_MODELS_MAX_TOKENS_CK"
-      check ( max_tokens is null or max_tokens > 0 ) enable
+      check ( max_tokens is null or max_tokens > 0 ) enable,
+   constraint "CB_AI_MODELS_EXCL_CHAT_OPT_CK"
+      check ( exclude_from_chat_option in ( 'Y', 'N' ) ) enable
 ) annotations ( "DESCRIPTION" 'Stores AI model connection configurations used by CB_AGENT.',"DISPLAY" 'AI Models' );
