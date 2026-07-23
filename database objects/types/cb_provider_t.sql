@@ -31,13 +31,13 @@ create or replace type cb_provider_t force as object (
     * @function get_text_response
     * @description Provider-specific request execution contract. p_user_message
     *              is optional when p_history_messages already contains the full transcript.
-    * @param p_system_prompt System instructions for the provider request.
+    * @param p_system_context Provider-neutral system-context JSON for the provider request.
     * @param p_history_messages Conversation history encoded for the provider.
     * @param p_user_message Current user message when not already in history.
     * @returns CLOB containing provider response text or response diagnostics.
     */
    not instantiable member function get_text_response (
-      p_system_prompt    in clob,
+      p_system_context   in clob,
       p_history_messages in clob,
       p_user_message     in clob
    ) return clob

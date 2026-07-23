@@ -8,6 +8,30 @@
  */
 create or replace package cb_agent_util as
 
+   /**
+    * @constant gc_context_instructions
+    * @description JSON key for stable chatbot instructions.
+    */
+   gc_context_instructions constant varchar2(30) := 'instructions';
+
+   /**
+    * @constant gc_context_global_context
+    * @description JSON key for chatbot-level stable context.
+    */
+   gc_context_global_context constant varchar2(30) := 'global_context';
+
+   /**
+    * @constant gc_context_conversation_summary
+    * @description JSON key for the running conversation summary.
+    */
+   gc_context_conversation_summary constant varchar2(30) := 'conversation_summary';
+
+   /**
+    * @constant gc_context_retrieved_context
+    * @description JSON key for per-request retrieved conversation memory.
+    */
+   gc_context_retrieved_context constant varchar2(30) := 'retrieved_context';
+
     /**
     * @procedure validate_provider_inputs
     * @description Validates common provider connection inputs.
@@ -58,6 +82,44 @@ create or replace package cb_agent_util as
       p_context      in varchar2,
       p_package_name in varchar2
    ) return json_array_t;
+
+   /**
+    * @function build_system_context
+    * @description Builds provider-neutral system context as one JSON object.
+    * @param p_instructions Stable chatbot or task instructions.
+    * @param p_global_context Optional chatbot-level stable context.
+    * @param p_conversation_summary Optional running conversation summary.
+    * @param p_retrieved_context Optional per-request retrieved memory.
+    * @returns CLOB JSON object containing named system-context sections.
+    */
+   function build_system_context (
+      p_instructions         in clob,
+      p_global_context       in clob default null,
+      p_conversation_summary in clob default null,
+      p_retrieved_context    in clob default null
+   ) return clob;
+
+   /**
+    * @function parse_system_context
+    * @description Parses provider-neutral system-context JSON.
+    * @param p_system_context JSON object CLOB to parse.
+    * @param p_package_name Package name included in validation errors.
+    * @returns Parsed JSON object, or an empty object when input is null.
+    */
+   function parse_system_context (
+      p_system_context in clob,
+      p_package_name   in varchar2
+   ) return json_object_t;
+
+   /**
+    * @function flatten_system_context
+    * @description Formats structured system context as one labeled text prompt.
+    * @param p_system_context Provider-neutral system-context JSON.
+    * @returns CLOB containing populated sections in their defined order.
+    */
+   function flatten_system_context (
+      p_system_context in clob
+   ) return clob;
 
     /**
     * @function make_api_request

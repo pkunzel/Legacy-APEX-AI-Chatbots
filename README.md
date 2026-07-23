@@ -74,6 +74,14 @@ memory recall and assembles the request context in this order:
 4. recalled summarized messages
 5. live unsummarized conversation rows
 
+`CB_AGENT` passes the first four items to provider adapters as one structured,
+provider-neutral system-context JSON object. OpenAI-compatible adapters flatten
+the object back into one system message. Claude sends separate Anthropic system
+blocks: it caches the stable prompt/global-context prefix and adds a second
+cache breakpoint after the running summary. Retrieved memory is intentionally
+uncached. Claude cache diagnostics are written to `APEX_DEBUG` from the
+provider response usage fields; the default cache lifetime is five minutes.
+
 ### Summary
 
 `CB_AGENT.create_summary` summarizes older unsummarized rows, appends the model output to `CB_CHATBOTS.CURRENT_SUMMARY`, and marks the included rows as summarized.
@@ -122,6 +130,8 @@ The embedding helper uses the APEX AI service static ID `db_onnx_model`.
 - Conversation memory is based on summarized rows only.
 - Message embeddings are maintained by trigger, not by the provider adapters.
 - `CB_AI_MODELS.API_KEY` stores the raw secret, and the packages format provider-specific headers at runtime.
+- Claude prompt caching does not currently cache conversation history because
+  retrieved context changes before the message array in the Anthropic request.
 
 ## Known Gaps
 

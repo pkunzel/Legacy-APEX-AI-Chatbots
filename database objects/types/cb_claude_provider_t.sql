@@ -25,13 +25,13 @@ create or replace type cb_claude_provider_t under cb_provider_t (
    /**
     * @function get_text_response
     * @description Sends a request through the Anthropic Messages API adapter.
-    * @param p_system_prompt System instructions for the provider request.
+    * @param p_system_context Provider-neutral system-context JSON.
     * @param p_history_messages Conversation history encoded for the provider.
     * @param p_user_message Current user message when not already in history.
     * @returns CLOB containing provider response text or response diagnostics.
     */
    overriding member function get_text_response (
-      p_system_prompt    in clob,
+      p_system_context   in clob,
       p_history_messages in clob,
       p_user_message     in clob
    ) return clob

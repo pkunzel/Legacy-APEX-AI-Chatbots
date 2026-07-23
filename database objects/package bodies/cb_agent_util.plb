@@ -11,6 +11,63 @@ create or replace package body cb_agent_util as
    gc_content_type constant varchar2(50) := 'application/json';
 
    /**
+    * @function has_text
+    * @description Returns whether a CLOB contains at least one non-whitespace character.
+    */
+   function has_text (
+      p_value in clob
+   ) return boolean is
+   begin
+      return p_value is not null
+         and regexp_like(dbms_lob.substr(p_value, 32767, 1), '[^[:space:]]');
+   end has_text;
+
+   /**
+    * @function get_context_section
+    * @description Returns one CLOB-safe system-context JSON value when present.
+    */
+   function get_context_section (
+      p_system_context in json_object_t,
+      p_key            in varchar2
+   ) return clob is
+   begin
+      if p_system_context is null
+      or not p_system_context.has(p_key)
+      or p_system_context.get(p_key).is_null then
+         return null;
+      end if;
+
+      return p_system_context.get_clob(p_key);
+   end get_context_section;
+
+   /**
+    * @function append_context_section
+    * @description Appends one populated named section to flat system-context text.
+    */
+   function append_context_section (
+      p_context in clob,
+      p_title   in varchar2,
+      p_value   in clob
+   ) return clob is
+   begin
+      if not has_text(p_value) then
+         return p_context;
+      elsif p_context is null then
+         if p_title is null then
+            return p_value;
+         end if;
+
+         return p_title || ':' || chr(10) || p_value;
+      end if;
+
+      if p_title is null then
+         return p_context || chr(10) || chr(10) || p_value;
+      end if;
+
+      return p_context || chr(10) || chr(10) || p_title || ':' || chr(10) || p_value;
+   end append_context_section;
+
+   /**
     * @procedure validate_provider_inputs
     * @description Validates common provider connection inputs.
     */
@@ -105,6 +162,99 @@ create or replace package body cb_agent_util as
             || sqlerrm
          );
    end parse_message_array;
+
+   /**
+    * @function build_system_context
+    * @description Builds provider-neutral system context as one JSON object.
+    */
+   function build_system_context (
+      p_instructions         in clob,
+      p_global_context       in clob default null,
+      p_conversation_summary in clob default null,
+      p_retrieved_context    in clob default null
+   ) return clob is
+      l_system_context json_object_t;
+   begin
+      l_system_context := json_object_t();
+      l_system_context.put(gc_context_instructions, p_instructions);
+      l_system_context.put(gc_context_global_context, p_global_context);
+      l_system_context.put(gc_context_conversation_summary, p_conversation_summary);
+      l_system_context.put(gc_context_retrieved_context, p_retrieved_context);
+
+      return l_system_context.to_clob();
+   end build_system_context;
+
+   /**
+    * @function parse_system_context
+    * @description Parses provider-neutral system-context JSON.
+    */
+   function parse_system_context (
+      p_system_context in clob,
+      p_package_name   in varchar2
+   ) return json_object_t is
+      l_system_context json_object_t;
+   begin
+      if p_system_context is null then
+         return json_object_t();
+      end if;
+
+      l_system_context := json_object_t.parse(p_system_context);
+      return l_system_context;
+   exception
+      when others then
+         apex_debug.error(
+            'Invalid system-context JSON for '
+            || p_package_name
+            || '. Request payload was not created: '
+            || dbms_utility.format_error_stack
+         );
+         raise_application_error(
+            -20003,
+            'Invalid system-context JSON passed to '
+            || p_package_name
+            || ': '
+            || sqlerrm
+         );
+   end parse_system_context;
+
+   /**
+    * @function flatten_system_context
+    * @description Formats structured system context as one labeled text prompt.
+    */
+   function flatten_system_context (
+      p_system_context in clob
+   ) return clob is
+      l_context_json json_object_t;
+      l_context      clob;
+   begin
+      l_context_json := parse_system_context(
+         p_system_context => p_system_context,
+         p_package_name   => 'cb_agent_util'
+      );
+
+      l_context := append_context_section(
+         p_context => l_context,
+         p_title   => null,
+         p_value   => get_context_section(l_context_json, gc_context_instructions)
+      );
+      l_context := append_context_section(
+         p_context => l_context,
+         p_title   => 'Global context',
+         p_value   => get_context_section(l_context_json, gc_context_global_context)
+      );
+      l_context := append_context_section(
+         p_context => l_context,
+         p_title   => 'Conversation summary',
+         p_value   => get_context_section(l_context_json, gc_context_conversation_summary)
+      );
+      l_context := append_context_section(
+         p_context => l_context,
+         p_title   => 'Recalled conversation memory',
+         p_value   => get_context_section(l_context_json, gc_context_retrieved_context)
+      );
+
+      return l_context;
+   end flatten_system_context;
 
    /**
     * @function make_api_request

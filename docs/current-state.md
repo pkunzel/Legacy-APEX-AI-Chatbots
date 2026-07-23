@@ -58,8 +58,9 @@ when generating future replies.
 4. `CB_CONVERSATION` invokes `CB_AGENT.get_text_response` using the current
    user-message row and selected `CB_AI_MODELS.ID`.
 5. `CB_AGENT` recalls summarized messages through `CB_MEMORY.get_recalled_messages`.
-6. `CB_AGENT` builds context from the bot prompt, current summary, recalled
-   memory, and unsummarized conversation rows.
+6. `CB_AGENT` builds provider-neutral system-context JSON from the bot prompt,
+   global context, current summary, and recalled memory, alongside
+   unsummarized conversation rows.
 7. `CB_AGENT` creates a provider subtype and returns the assistant text.
 8. `CB_CONVERSATION` saves the assistant reply to `CB_CHATBOT_CONVERSATIONS`.
 9. On page render, an APEX BLOB item can call
@@ -83,7 +84,7 @@ of raw user text. The current user message remains part of the unsummarized
 transcript, and the ID is used to load its embedding for conversation memory
 recall.
 
-Provider context is assembled in this order:
+Provider context is assembled semantically in this order:
 
 1. Bot system prompt from `CB_CHATBOTS.PROMPT`.
 2. Global context from `CB_CHATBOTS.GLOBAL_CONTEXT`, when present.
@@ -91,6 +92,18 @@ Provider context is assembled in this order:
 4. Recalled summarized conversation messages, when present.
 5. Unsummarized conversation rows from `CB_CHATBOT_CONVERSATIONS`, including the
    current user message.
+
+`CB_AGENT` sends items 1-4 as a structured system-context JSON object. The
+OpenAI-compatible adapter flattens it into the legacy single system message.
+The Claude adapter sends separate system content blocks and uses explicit
+five-minute prompt-cache breakpoints after the stable prompt/global-context
+prefix and after the current summary. Recalled memory is dynamic and therefore
+has no cache marker. The Claude adapter writes available cache usage counts to
+`APEX_DEBUG`; it does not persist them.
+
+Because dynamic recalled memory is still sent as top-level Anthropic system
+content before conversation messages, this phase does not cache the growing
+conversation-history prefix.
 
 Because the current message is already in the unsummarized transcript,
 `CB_AGENT` passes `null` for the adapter-level `p_user_message`. The adapters

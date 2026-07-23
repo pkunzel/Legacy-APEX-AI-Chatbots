@@ -4,7 +4,7 @@
  * @module cb_adapter_openai
  * @dependencies cb_agent_util, APEX_DEBUG, DBMS_LOB, DBMS_UTILITY,
  *               UTL_HTTP, JSON_OBJECT_T, JSON_ARRAY_T
- * @notes Adapter-only package. It receives model, endpoint, API key, prompt,
+ * @notes Adapter-only package. It receives model, endpoint, API key, structured context,
  *        history, and user input from cb_openai_provider_t; it does not query
  *        app tables or credential stores.
  */
@@ -17,7 +17,7 @@ create or replace package cb_adapter_openai as
     * @param p_url Provider endpoint URL.
     * @param p_api_key Authorization header value, usually Bearer plus token.
     * @param p_model Provider model identifier.
-    * @param p_system_prompt System prompt to prepend to messages.
+    * @param p_system_context Provider-neutral system-context JSON.
     * @param p_history_messages JSON array CLOB containing prior role/content messages.
     * @param p_user_message Optional latest user message, appended when not already present in history.
     * @param p_max_tokens Maximum response tokens.
@@ -27,7 +27,7 @@ create or replace package cb_adapter_openai as
       p_url              in varchar2,
       p_api_key          in varchar2,
       p_model            in varchar2,
-      p_system_prompt    in clob,
+      p_system_context   in clob,
       p_history_messages in clob,
       p_user_message     in clob,
       p_max_tokens       in number

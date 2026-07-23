@@ -19,7 +19,7 @@ create or replace type body cb_claude_provider_t as
    end get_provider_name;
 
    overriding member function get_text_response (
-      p_system_prompt    in clob,
+      p_system_context   in clob,
       p_history_messages in clob,
       p_user_message     in clob
    ) return clob is
@@ -28,7 +28,7 @@ create or replace type body cb_claude_provider_t as
          p_url              => self.url,
          p_api_key          => self.api_key,
          p_model            => self.model,
-         p_system_prompt    => p_system_prompt,
+         p_system_context   => p_system_context,
          p_history_messages => p_history_messages,
          p_user_message     => p_user_message,
          p_max_tokens       => self.max_tokens

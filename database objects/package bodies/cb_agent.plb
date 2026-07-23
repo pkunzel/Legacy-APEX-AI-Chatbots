@@ -194,31 +194,9 @@ create or replace package body cb_agent as
    end validate_chat_response;
 
    /**
-    * @function append_context_section
-    * @description Returns system context with an optional named section appended.
-    */
-   function append_context_section (
-      p_context in clob,
-      p_title   in varchar2,
-      p_value   in clob
-   ) return clob is
-   begin
-      if p_value is null
-      or not regexp_like(dbms_lob.substr(p_value, 32767, 1), '[^[:space:]]') then
-         return p_context;
-      end if;
-
-      if p_context is null then
-         return p_title || ':' || chr(10) || p_value;
-      end if;
-
-      return p_context || chr(10) || chr(10) || p_title || ':' || chr(10) || p_value;
-   end append_context_section;
-
-   /**
     * @function get_system_context
-    * @description Combines the bot prompt, global context, current summary,
-    *              and recalled older messages.
+    * @description Builds provider-neutral context from bot instructions, stable
+    *              context, running summary, and recalled older messages.
     */
    function get_system_context (
       p_bot_id            in number,
@@ -238,24 +216,11 @@ create or replace package body cb_agent as
         from cb_chatbots
        where id = p_bot_id;
 
-      l_system_context := l_prompt;
-
-      l_system_context := append_context_section(
-         p_context => l_system_context,
-         p_title   => 'Global context',
-         p_value   => l_global_context
-      );
-
-      l_system_context := append_context_section(
-         p_context => l_system_context,
-         p_title   => 'Conversation summary',
-         p_value   => l_current_summary
-      );
-
-      l_system_context := append_context_section(
-         p_context => l_system_context,
-         p_title   => 'Recalled conversation memory',
-         p_value   => p_recalled_messages
+      l_system_context := cb_agent_util.build_system_context(
+         p_instructions         => l_prompt,
+         p_global_context       => l_global_context,
+         p_conversation_summary => l_current_summary,
+         p_retrieved_context    => p_recalled_messages
       );
 
       return l_system_context;
@@ -481,7 +446,7 @@ create or replace package body cb_agent as
    ) return clob is
       l_signature_type    varchar2(30);
       l_max_tokens        number;
-      l_system_prompt     clob;
+      l_system_context    clob;
       l_history_messages  clob;
       l_recalled_messages clob;
       l_message_embedding cb_chatbot_conversations.message_embedding%type;
@@ -506,7 +471,7 @@ create or replace package body cb_agent as
          p_max_messages    => p_recall_message_count
       );
 
-      l_system_prompt := get_system_context(
+      l_system_context := get_system_context(
          p_bot_id            => p_bot_id,
          p_recalled_messages => l_recalled_messages
       );
@@ -530,7 +495,7 @@ create or replace package body cb_agent as
       );
 
       l_response := l_provider.get_text_response(
-         p_system_prompt    => l_system_prompt,
+         p_system_context   => l_system_context,
          p_history_messages => l_history_messages,
          p_user_message     => null
       );
@@ -648,7 +613,9 @@ create or replace package body cb_agent as
       );
 
       l_response := l_provider.get_text_response(
-         p_system_prompt    => l_image_definition_prompt,
+         p_system_context   => cb_agent_util.build_system_context(
+                                  p_instructions => l_image_definition_prompt
+                               ),
          p_history_messages => null,
          p_user_message     => p_assistant_response
       );
@@ -818,7 +785,9 @@ create or replace package body cb_agent as
       );
 
       l_new_summary := l_provider.get_text_response(
-         p_system_prompt    => l_summary_prompt,
+         p_system_context   => cb_agent_util.build_system_context(
+                                  p_instructions => l_summary_prompt
+                               ),
          p_history_messages => null,
          p_user_message     => l_summary_transcript
       );

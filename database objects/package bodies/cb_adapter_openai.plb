@@ -5,7 +5,7 @@
  * @dependencies APEX_DEBUG, DBMS_LOB, DBMS_UTILITY, UTL_HTTP,
  *               JSON_OBJECT_T, JSON_ARRAY_T, cb_agent_util
  * @notes Provider-specific algorithm:
- *        1. Convert generic prompt/history/user inputs into OpenAI messages.
+ *        1. Flatten generic system context and convert it with history/user inputs into OpenAI messages.
  *        2. POST the request through shared utility HTTP handling.
  *        3. Extract choices[0].message.content from the response.
  *        The package is called by cb_openai_provider_t, not directly by the facade.
@@ -18,7 +18,7 @@ create or replace package body cb_adapter_openai as
     */
    function build_payload (
       p_model            in varchar2,
-      p_system_prompt    in clob,
+      p_system_context   in clob,
       p_history_messages in clob,
       p_user_message     in clob,
       p_max_tokens       in number
@@ -26,14 +26,17 @@ create or replace package body cb_adapter_openai as
       l_json_obj json_object_t;
       l_messages json_array_t;
       l_history  json_array_t;
+      l_system_prompt clob;
    begin
       l_messages := json_array_t();
 
-      if p_system_prompt is not null then
+      l_system_prompt := cb_agent_util.flatten_system_context(p_system_context);
+
+      if l_system_prompt is not null then
          cb_agent_util.append_message(
             p_messages => l_messages,
             p_role     => 'system',
-            p_message  => p_system_prompt
+            p_message  => l_system_prompt
          );
       end if;
 
@@ -168,7 +171,7 @@ create or replace package body cb_adapter_openai as
       p_url              in varchar2,
       p_api_key          in varchar2,
       p_model            in varchar2,
-      p_system_prompt    in clob,
+      p_system_context   in clob,
       p_history_messages in clob,
       p_user_message     in clob,
       p_max_tokens       in number
@@ -184,7 +187,7 @@ create or replace package body cb_adapter_openai as
 
       l_payload := build_payload(
          p_model            => p_model,
-         p_system_prompt    => p_system_prompt,
+         p_system_context   => p_system_context,
          p_history_messages => p_history_messages,
          p_user_message     => p_user_message,
          p_max_tokens       => p_max_tokens
