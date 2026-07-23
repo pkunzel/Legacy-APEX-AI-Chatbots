@@ -22,6 +22,10 @@ Follow these rules for every SQL or PL/SQL task in this project.
 - Document public package members with Javadoc-style blocks using `@procedure` or `@function`, `@description`, `@param`, and `@returns` where applicable.
 - Keep implementation helpers private unless another package genuinely needs them.
 
+## Table design
+
+- Every table must define a primary key. Use the project's standard identity `ID` column and a named primary-key constraint unless the user explicitly requires a different key design.
+
 ## Approval gates
 
 - If analysis, review, diagnosis, or planning indicates that a database object must be updated or deleted, stop and ask for explicit user approval before modifying any database object or its source file.
