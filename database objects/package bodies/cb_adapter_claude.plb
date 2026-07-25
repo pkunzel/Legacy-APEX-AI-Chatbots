@@ -285,7 +285,7 @@ create or replace package body cb_adapter_claude as
 
    /**
     * @function parse_response
-    * @description Extracts content[0].text from an Anthropic-compatible response.
+    * @description Extracts text from the first Anthropic text content block.
     */
    function parse_response (
       p_api_response_raw in clob
@@ -305,15 +305,16 @@ create or replace package body cb_adapter_claude as
 
          if l_content_array is not null
          and l_content_array.get_size > 0 then
-            l_message_json_obj := json_object_t(l_content_array.get(0));
+            for l_content_index in 0 .. l_content_array.get_size - 1 loop
+               l_message_json_obj := json_object_t(
+                  l_content_array.get(l_content_index)
+               );
 
-            -- Starting in Claude 5 we're getting the thinking object often
-            -- in the position 1 of the content array
-            if l_message_json_obj.get_string('type') = 'thinking' then
-               l_message_json_obj := json_object_t(l_content_array.get(1));
-            end if;
-
-            l_assistant_text := l_message_json_obj.get_string('text');
+               if l_message_json_obj.get_string('type') = 'text' then
+                  l_assistant_text := l_message_json_obj.get_string('text');
+                  exit;
+               end if;
+            end loop;
 
             if l_assistant_text is null then
                return 'Error: No assistant text found in the response.';

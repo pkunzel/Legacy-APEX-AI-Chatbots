@@ -441,7 +441,7 @@ create or replace package body cb_agent as
       p_model                in varchar2,
       p_bot_id               in number,
       p_current_message_id   in number,
-      p_recall_message_count in number default 10,
+      p_recall_message_count in number default 20,
       p_max_tokens           in number default null
    ) return clob is
       l_signature_type    varchar2(30);

@@ -1,0 +1,220 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="Interactive current-state code diagram for the Oracle chatbot database project.">
+  <title>Chatbot project code diagram</title>
+  <style>
+    :root {
+      color-scheme: light dark;
+      --background: #f5f7fb;
+      --foreground: #172033;
+      --muted: #5b667a;
+      --border: #cbd3e1;
+      --surface: #ffffff;
+      --surface-soft: #edf1f7;
+      --primary: #315de8;
+      --primary-soft: #e9edff;
+      --primary-foreground: #ffffff;
+      --accent: #e3e9ff;
+      --viz-series-1: #315de8;
+      --viz-series-2: #0b806b;
+      --viz-series-3: #a55d05;
+      --viz-series-4: #8853a6;
+      --viz-series-5: #b43d4f;
+      --viz-series-6: #237c96;
+      --shadow: 0 10px 24px rgba(25, 39, 75, .08);
+    }
+    @media (prefers-color-scheme: dark) {
+      :root {
+        --background: #121722;
+        --foreground: #edf2ff;
+        --muted: #aeb8cc;
+        --border: #3b465c;
+        --surface: #1b2230;
+        --surface-soft: #252d3c;
+        --primary: #8ba5ff;
+        --primary-soft: #26355f;
+        --primary-foreground: #11182a;
+        --accent: #29385e;
+        --shadow: 0 10px 24px rgba(0, 0, 0, .24);
+      }
+    }
+    * { box-sizing: border-box; }
+    html { background: var(--background); }
+    body {
+      margin: 0;
+      color: var(--foreground);
+      background: var(--background);
+      font-family: ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      font-size: 15px;
+      line-height: 1.45;
+    }
+    main { max-width: 1500px; margin: 0 auto; padding: 28px clamp(16px, 3vw, 48px) 48px; }
+    .eyebrow { margin: 0 0 5px; color: var(--muted); font-size: 12px; letter-spacing: .11em; text-transform: uppercase; }
+    h1, h2, h3 { margin: 0; font-weight: 500; line-height: 1.2; }
+    h1 { font-size: clamp(24px, 3vw, 36px); }
+    h2 { font-size: 18px; }
+    h3 { font-size: 15px; }
+    .intro { display: grid; gap: 9px; margin-bottom: 20px; max-width: 880px; }
+    .intro p { margin: 0; color: var(--muted); }
+    .controls { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; margin: 18px 0 12px; }
+    .view-button {
+      appearance: none; border: 1px solid var(--border); color: var(--foreground); background: transparent;
+      border-radius: 7px; padding: 9px 13px; cursor: pointer; font: inherit;
+    }
+    .view-button:hover { background: var(--surface-soft); }
+    .view-button[aria-selected="true"] { background: var(--primary); color: var(--primary-foreground); border-color: var(--primary); }
+    .hint { color: var(--muted); font-size: 13px; margin-left: auto; }
+    .diagram-layout { display: grid; grid-template-columns: minmax(0, 1fr) 280px; gap: 16px; align-items: start; }
+    .diagram-shell { min-width: 0; border: 1px solid var(--border); border-radius: 10px; background: var(--surface); box-shadow: var(--shadow); overflow: auto; }
+    svg { display: block; min-width: 920px; width: 100%; height: auto; color: var(--foreground); }
+    .detail { min-height: 240px; padding: 17px; border: 1px solid var(--border); border-radius: 10px; background: var(--surface); box-shadow: var(--shadow); }
+    .detail h2 { margin-bottom: 8px; }
+    .detail p { color: var(--muted); margin: 0 0 14px; }
+    .detail-label { color: var(--muted); font-size: 12px; text-transform: uppercase; letter-spacing: .08em; margin-bottom: 4px; }
+    .detail ul { padding-left: 19px; margin: 0; }
+    .detail li { margin: 4px 0; }
+    a { color: var(--primary); }
+    .empty { color: var(--muted); }
+    .legend { display: flex; flex-wrap: wrap; gap: 8px 14px; padding: 11px 2px 0; color: var(--muted); font-size: 12px; }
+    .legend span { display: inline-flex; align-items: center; gap: 5px; }
+    .swatch { width: 10px; height: 10px; border-radius: 3px; background: var(--swatch); border: 1px solid color-mix(in srgb, var(--swatch) 60%, var(--border)); }
+    footer { color: var(--muted); font-size: 12px; margin-top: 18px; }
+    footer code, .detail code { color: var(--foreground); }
+    .node { cursor: pointer; outline: none; }
+    .node rect { fill: var(--node-fill, var(--surface-soft)); stroke: var(--border); stroke-width: 1.4; }
+    .node:hover rect, .node:focus rect { stroke: var(--primary); stroke-width: 2.3; }
+    .node.selected rect { stroke: var(--primary); stroke-width: 3; filter: drop-shadow(0 4px 6px rgba(49, 93, 232, .18)); }
+    .node.dimmed { opacity: .24; }
+    .node .label { fill: var(--foreground); font-size: 12px; font-weight: 500; pointer-events: none; }
+    .node .category { fill: var(--muted); font-size: 9px; letter-spacing: .08em; text-transform: uppercase; pointer-events: none; }
+    .edge { fill: none; stroke: var(--border); stroke-width: 1.5; marker-end: url(#arrow); }
+    .edge.call { stroke: var(--viz-series-1); }
+    .edge.write { stroke: var(--viz-series-2); }
+    .edge.read { stroke: var(--viz-series-6); stroke-dasharray: 5 4; }
+    .edge.external { stroke: var(--viz-series-3); stroke-dasharray: 3 4; }
+    .edge.inherit { stroke: var(--viz-series-4); stroke-dasharray: 7 4; }
+    .edge.relation { stroke: var(--muted); stroke-dasharray: 2 4; }
+    .edge.error { stroke: var(--viz-series-5); stroke-dasharray: 3 3; marker-end: url(#error-arrow); }
+    .edge.sequence { stroke: var(--primary); stroke-width: 2; marker-end: url(#arrow); }
+    .edge.dimmed { opacity: .12; }
+    .edge-label { fill: var(--muted); font-size: 8px; paint-order: stroke; stroke: var(--surface); stroke-width: 3px; stroke-linejoin: round; }
+    .group-label { fill: var(--muted); font-size: 11px; letter-spacing: .09em; text-transform: uppercase; }
+    .lane { fill: none; stroke: var(--border); stroke-width: 1; stroke-dasharray: 2 5; }
+    .sequence-number { fill: var(--primary); font-size: 11px; font-weight: 500; }
+    @media (max-width: 880px) {
+      main { padding: 22px 13px 36px; }
+      .diagram-layout { grid-template-columns: 1fr; }
+      .detail { min-height: 0; }
+      .hint { width: 100%; margin-left: 0; }
+    }
+    @media (prefers-reduced-motion: reduce) { * { scroll-behavior: auto !important; } }
+  </style>
+</head>
+<body>
+  <main>
+    <section class="intro" aria-labelledby="page-title">
+      <p class="eyebrow">Phase 1 · Oracle Database / APEX chatbot proof of concept</p>
+      <h1 id="page-title">Project code diagram</h1>
+      <p>Explore the current runtime boundaries, source-object dependencies, and the end-to-end chat request flow. Select a node to see its responsibility and jump to its source file.</p>
+    </section>
+
+    <nav class="controls" role="tablist" aria-label="Diagram views">
+      <button class="view-button" type="button" role="tab" aria-selected="true" aria-controls="diagram" data-view="system">System architecture</button>
+      <button class="view-button" type="button" role="tab" aria-selected="false" aria-controls="diagram" data-view="dependencies">Object dependencies</button>
+      <button class="view-button" type="button" role="tab" aria-selected="false" aria-controls="diagram" data-view="sequence">Chat request sequence</button>
+      <span class="hint">Select a node · Tab/Shift+Tab moves between nodes</span>
+    </nav>
+
+    <div class="diagram-layout">
+      <section class="diagram-shell" aria-label="Diagram canvas">
+        <svg id="diagram" role="img" aria-labelledby="diagram-title diagram-description" viewBox="0 0 1280 700" preserveAspectRatio="xMinYMin meet"></svg>
+      </section>
+      <aside class="detail" aria-live="polite" aria-label="Selected node details">
+        <p class="detail-label">Selected object</p>
+        <h2 id="detail-title">No node selected</h2>
+        <p id="detail-summary" class="empty">Choose a node in the diagram to inspect its role and source links.</p>
+        <div id="detail-files"></div>
+      </aside>
+    </div>
+    <div id="legend" class="legend" aria-label="Diagram legend"></div>
+    <footer>Source map is derived from <code>docs/current-state.md</code>, <code>docs/object-map.md</code>, and the SQL/PLB dependency declarations. The static export is <a href="architecture.svg">architecture.svg</a>.</footer>
+  </main>
+
+  <script src="diagram-data.js"></script>
+  <script>
+    (() => {
+      "use strict";
+      const data = window.CODE_DIAGRAM_DATA;
+      const svg = document.getElementById("diagram");
+      const detailTitle = document.getElementById("detail-title");
+      const detailSummary = document.getElementById("detail-summary");
+      const detailFiles = document.getElementById("detail-files");
+      const legend = document.getElementById("legend");
+      const buttons = [...document.querySelectorAll("[data-view]")];
+      let activeView = "system";
+      let selectedId = null;
+
+      const palette = {
+        external: "color-mix(in srgb, var(--viz-series-3) 13%, var(--surface))",
+        orchestration: "color-mix(in srgb, var(--viz-series-1) 13%, var(--surface))",
+        memory: "color-mix(in srgb, var(--viz-series-2) 13%, var(--surface))",
+        utility: "color-mix(in srgb, var(--viz-series-6) 13%, var(--surface))",
+        provider: "color-mix(in srgb, var(--viz-series-4) 13%, var(--surface))",
+        table: "color-mix(in srgb, var(--viz-series-5) 11%, var(--surface))",
+        trigger: "color-mix(in srgb, var(--viz-series-3) 10%, var(--surface))",
+        group: "transparent"
+      };
+      const legendItems = [
+        ["orchestration", "Orchestration"], ["provider", "Provider"], ["memory", "Memory"],
+        ["table", "Table"], ["trigger", "Trigger"], ["external", "External boundary"]
+      ];
+      legend.innerHTML = legendItems.map(([key, label]) => `<span><i class="swatch" style="--swatch: var(--viz-series-${{ orchestration: 1, provider: 4, memory: 2, table: 5, trigger: 3, external: 3 }[key]})"></i>${label}</span>`).join("");
+
+      function getView() { return data.views.find(view => view.id === activeView); }
+      function esc(value) { return String(value).replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c])); }
+      function wrapLabel(label, width) {
+        const maxChars = Math.max(9, Math.floor(width / 7));
+        const words = label.split(/\s+/).filter(Boolean).flatMap(word => word.includes("_") ? word.match(/[^_]+_?|_+/g) : [word]);
+        const expanded = words.flatMap(word => {
+          if (word.length <= maxChars) return [word];
+          const chunks = [];
+          for (let index = 0; index < word.length; index += maxChars) chunks.push(word.slice(index, index + maxChars));
+          return chunks;
+        });
+        const lines = []; let line = "";
+        expanded.forEach(word => { const joiner = /[_-]$/.test(line) ? "" : " "; const candidate = (line + joiner + word).trim(); if (candidate.length > maxChars && line) { lines.push(line); line = word; } else { line = candidate; } });
+        if (line) lines.push(line); return lines;
+      }
+      function center(node) { return { x: node.x + node.width / 2, y: node.y + node.height / 2 }; }
+      function edgePath(a, b) {
+        const ac = center(a), bc = center(b); const horizontal = Math.abs(bc.x - ac.x) >= Math.abs(bc.y - ac.y);
+        if (horizontal) { const mid = (ac.x + bc.x) / 2; return `M ${ac.x} ${ac.y} C ${mid} ${ac.y}, ${mid} ${bc.y}, ${bc.x} ${bc.y}`; }
+        const mid = (ac.y + bc.y) / 2; return `M ${ac.x} ${ac.y} C ${ac.x} ${mid}, ${bc.x} ${mid}, ${bc.x} ${bc.y}`;
+      }
+      function render() {
+        const view = getView(); const nodeMap = new Map(view.nodes.map(node => [node.id, node]));
+        const validEdges = view.edges.filter(edge => nodeMap.has(edge.from) && nodeMap.has(edge.to));
+        const missing = view.edges.length - validEdges.length;
+        if (missing) console.warn(`${missing} edge(s) skipped in view ${view.id}: missing node reference`);
+        svg.setAttribute("viewBox", `0 0 ${view.canvas.width} ${view.canvas.height}`);
+        svg.innerHTML = `<title id="diagram-title">${esc(view.label)}</title><desc id="diagram-description">${esc(view.description)}</desc><defs><marker id="arrow" markerWidth="8" markerHeight="8" refX="7" refY="4" orient="auto"><path d="M 0 0 L 8 4 L 0 8 z" fill="currentColor"></path></marker><marker id="error-arrow" markerWidth="8" markerHeight="8" refX="7" refY="4" orient="auto"><path d="M 0 0 L 8 4 L 0 8 z" fill="var(--viz-series-5)"></path></marker></defs>`;
+        const edgeLayer = document.createElementNS("http://www.w3.org/2000/svg", "g"); edgeLayer.setAttribute("aria-hidden", "true");
+        validEdges.forEach(edge => { const path = document.createElementNS("http://www.w3.org/2000/svg", "path"); path.setAttribute("d", edgePath(nodeMap.get(edge.from), nodeMap.get(edge.to))); path.setAttribute("class", `edge ${edge.kind}`); path.dataset.from = edge.from; path.dataset.to = edge.to; edgeLayer.appendChild(path); const a = center(nodeMap.get(edge.from)), b = center(nodeMap.get(edge.to)); const text = document.createElementNS("http://www.w3.org/2000/svg", "text"); text.setAttribute("x", (a.x + b.x) / 2); text.setAttribute("y", (a.y + b.y) / 2 - 5); text.setAttribute("text-anchor", "middle"); text.setAttribute("class", "edge-label"); text.textContent = edge.sequence ? `${edge.sequence}. ${edge.label}` : edge.label; edgeLayer.appendChild(text); });
+        svg.appendChild(edgeLayer);
+        if (view.id === "sequence") { const lane = document.createElementNS("http://www.w3.org/2000/svg", "g"); lane.setAttribute("aria-hidden", "true"); [128, 338, 558].forEach(y => { const line = document.createElementNS("http://www.w3.org/2000/svg", "line"); line.setAttribute("x1", "20"); line.setAttribute("x2", String(view.canvas.width - 20)); line.setAttribute("y1", y); line.setAttribute("y2", y); line.setAttribute("class", "lane"); lane.appendChild(line); }); svg.insertBefore(lane, edgeLayer); }
+        const nodeLayer = document.createElementNS("http://www.w3.org/2000/svg", "g");
+        view.nodes.forEach(node => { const group = document.createElementNS("http://www.w3.org/2000/svg", "g"); group.setAttribute("class", `node${selectedId === node.id ? " selected" : ""}`); group.setAttribute("role", "button"); group.setAttribute("tabindex", "0"); group.setAttribute("aria-label", `${node.label}. ${node.summary}`); group.dataset.nodeId = node.id; const rect = document.createElementNS("http://www.w3.org/2000/svg", "rect"); rect.setAttribute("x", node.x); rect.setAttribute("y", node.y); rect.setAttribute("width", node.width); rect.setAttribute("height", node.height); rect.setAttribute("rx", "8"); rect.style.setProperty("--node-fill", palette[node.category] || palette.group); group.appendChild(rect); const cat = document.createElementNS("http://www.w3.org/2000/svg", "text"); cat.setAttribute("x", node.x + 12); cat.setAttribute("y", node.y + 16); cat.setAttribute("class", "category"); cat.textContent = node.category; group.appendChild(cat); const lineHeight = 14; const maxLines = Math.max(1, Math.floor((node.height - 42) / lineHeight)); const lines = wrapLabel(node.label, node.width - 24).slice(0, maxLines); const startY = node.y + 34 + Math.max(0, (node.height - 42 - (lines.length - 1) * lineHeight) / 2); lines.forEach((line, index) => { const text = document.createElementNS("http://www.w3.org/2000/svg", "text"); text.setAttribute("x", node.x + node.width / 2); text.setAttribute("y", startY + index * lineHeight); text.setAttribute("text-anchor", "middle"); text.setAttribute("class", "label"); text.textContent = line; group.appendChild(text); }); group.addEventListener("click", () => selectNode(node.id)); group.addEventListener("keydown", event => { if (event.key === "Enter" || event.key === " ") { event.preventDefault(); selectNode(node.id); } }); nodeLayer.appendChild(group); });
+        svg.appendChild(nodeLayer); updateSelection();
+      }
+      function selectNode(id) { selectedId = id; render(); const node = getView().nodes.find(item => item.id === id); if (!node) return; detailTitle.textContent = node.label; detailSummary.textContent = node.summary; detailSummary.classList.remove("empty"); detailFiles.innerHTML = node.files.length ? `<div class="detail-label">Source files</div><ul>${node.files.map(file => `<li><a href="${esc(file.href)}">${esc(file.label)}</a></li>`).join("")}</ul>` : `<p class="empty">Runtime boundary; no repository source file.</p>`; }
+      function updateSelection() { const connected = new Set(); if (selectedId) { getView().edges.forEach(edge => { if (edge.from === selectedId) connected.add(edge.to); if (edge.to === selectedId) connected.add(edge.from); }); } [...svg.querySelectorAll(".node")].forEach(node => node.classList.toggle("dimmed", Boolean(selectedId) && node.dataset.nodeId !== selectedId && !connected.has(node.dataset.nodeId))); [...svg.querySelectorAll(".edge")].forEach(edge => edge.classList.toggle("dimmed", Boolean(selectedId) && edge.dataset.from !== selectedId && edge.dataset.to !== selectedId)); }
+      function setView(id) { activeView = id; selectedId = null; buttons.forEach(button => { const active = button.dataset.view === id; button.setAttribute("aria-selected", String(active)); }); detailTitle.textContent = "No node selected"; detailSummary.textContent = "Choose a node in the diagram to inspect its role and source links."; detailSummary.classList.add("empty"); detailFiles.innerHTML = ""; render(); }
+      buttons.forEach(button => button.addEventListener("click", () => setView(button.dataset.view)));
+      render();
+    })();
+  </script>
+</body>
+</html>

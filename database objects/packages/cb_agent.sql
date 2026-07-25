@@ -16,8 +16,8 @@ create or replace package cb_agent as
    gc_signature_anthropic         constant varchar2(30) := 'ANTHROPIC';
 
    -- Provider-specific token defaults used when p_max_tokens is omitted.
-   gc_openai_max_tokens constant number := 8000;
-   gc_claude_max_tokens constant number := 4000;
+   gc_openai_max_tokens constant number := 10000;
+   gc_claude_max_tokens constant number := 10000;
 
    /**
     * @function get_text_response
@@ -42,7 +42,7 @@ create or replace package cb_agent as
       p_model                in varchar2,
       p_bot_id               in number,
       p_current_message_id   in number,
-      p_recall_message_count in number default 10,
+      p_recall_message_count in number default 20,
       p_max_tokens           in number default null
    ) return clob;
 
