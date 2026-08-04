@@ -4,7 +4,7 @@
  *              or clearing a chatbot's live transcript.
  * @module cb_conversation
  * @dependencies cb_agent, cb_chatbots, cb_chatbot_conversations,
- *               cb_chatbot_archives, cb_chatbot_images, cb_logs, cb_memory,
+ *               cb_chatbot_archives, cb_chatbot_images, cb_logs,
  *               APEX_DEBUG
  * @notes The package does not commit. The APEX caller owns the transaction.
  */

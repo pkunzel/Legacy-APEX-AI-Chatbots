@@ -24,11 +24,14 @@ The current design is intentionally provider-neutral:
 3. `CB_AGENT` loads the bot prompt, current summary, unsummarized history, and recalled summarized messages.
 4. The provider subtype delegates request construction and HTTP execution to `CB_ADAPTER_OPENAI` or `CB_ADAPTER_CLAUDE`.
 5. `CB_AGENT.get_text_response` returns assistant text only.
-6. `CB_CONVERSATION` saves the assistant message after the call.
-7. An APEX BLOB item can retrieve the image whose definition is closest to the
+6. `CB_CONVERSATION` saves the assistant message after the call without waiting
+   for image metadata.
+7. A later APEX Ajax call invokes `CB_AGENT.populate_latest_image_definition`
+   to derive and save image-search metadata for the latest assistant message.
+8. An APEX BLOB item can retrieve the image whose definition is closest to the
    latest assistant reply through `CB_CONVERSATION.get_current_image_blob`.
    It falls back to the chatbot display image.
-8. `CB_AGENT.create_summary` summarizes older conversation rows and appends the raw summary to `CB_CHATBOTS.CURRENT_SUMMARY`.
+9. `CB_AGENT.create_summary` summarizes older conversation rows and appends the raw summary to `CB_CHATBOTS.CURRENT_SUMMARY`.
 
 ## Repository Layout
 
@@ -65,8 +68,9 @@ Key objects:
 ### Chat
 
 `CB_CONVERSATION.submit_turn` saves or locates the current user-message row, then
-calls `CB_AGENT.get_text_response`. The agent uses that row's embedding for
-memory recall and assembles the request context in this order:
+calls `CB_AGENT.get_text_response` and immediately saves the assistant response.
+The agent uses the user row's embedding for memory recall and assembles the
+request context in this order:
 
 1. `CB_CHATBOTS.PROMPT`
 2. `CB_CHATBOTS.GLOBAL_CONTEXT`, when present
@@ -91,7 +95,9 @@ provider response usage fields; the default cache lifetime is five minutes.
 The usual APEX flow is:
 
 1. Call `CB_CONVERSATION.submit_turn`.
-2. Refresh the chat and image regions.
+2. Refresh the chat and other page assets.
+3. Invoke `CB_AGENT.populate_latest_image_definition` in a separate Ajax call.
+4. Refresh the image region when that call completes.
 
 Typical calls use either a saved model row or direct provider details:
 
@@ -100,6 +106,12 @@ CB_CONVERSATION.submit_turn(
    p_model_id   => :PXX_MODEL_ID,
    p_chatbot_id => :PXX_CHATBOT_ID,
    p_user_message => :PXX_MESSAGE
+);
+```
+
+```sql
+CB_AGENT.populate_latest_image_definition(
+   p_bot_id => :PXX_CHATBOT_ID
 );
 ```
 
@@ -124,7 +136,7 @@ The embedding helper uses the APEX AI service static ID `db_onnx_model`.
 ## Notes
 
 - The project is scoped to one chatbot proof of concept for one APEX application.
-- `CB_AGENT` does not insert assistant messages directly; `CB_CONVERSATION.submit_turn` owns chat-turn persistence.
+- `CB_AGENT` does not insert assistant messages directly; `CB_CONVERSATION.submit_turn` owns chat-turn persistence. `CB_AGENT.populate_latest_image_definition` later enriches the latest assistant row with image metadata.
 - Archive and clear are intentionally separate operations: archiving is non-destructive.
 - Semantic image selection compares the latest assistant reply with image-definition embeddings using cosine distance; it falls back to `CB_CHATBOTS.IMAGE`.
 - Conversation memory is based on summarized rows only.

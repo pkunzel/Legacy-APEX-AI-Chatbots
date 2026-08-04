@@ -17,8 +17,9 @@ when generating future replies.
 - APEX application exports are not kept here yet because the target OCI
   environment is limited to APEX 24.2.
 - The application layer owns screen flow, page items, button behavior, and
-  model selection. `CB_CONVERSATION.submit_turn` owns the multi-step user
-  message, response-generation, and assistant-message persistence workflow.
+  model selection. `CB_CONVERSATION.submit_turn` owns the user-message,
+  response-generation, and assistant-message persistence workflow. Image
+  metadata enrichment is a separate `CB_AGENT` call.
 - Vector embeddings are saved in `MESSAGE_EMBEDDING` as `vector(384, float32)`
   and used for memory recall, but no vector index is required yet.
 - Chatbot-owned images have text-definition embeddings in
@@ -62,16 +63,21 @@ when generating future replies.
    global context, current summary, and recalled memory, alongside
    unsummarized conversation rows.
 7. `CB_AGENT` creates a provider subtype and returns the assistant text.
-8. `CB_CONVERSATION` saves the assistant reply to `CB_CHATBOT_CONVERSATIONS`.
-9. On page render, an APEX BLOB item can call
+8. `CB_CONVERSATION` saves the assistant reply to `CB_CHATBOT_CONVERSATIONS`
+   without image-search metadata.
+9. A separate APEX Ajax call invokes
+   `CB_AGENT.populate_latest_image_definition` to derive and save image-search
+   metadata for the latest assistant message.
+10. On page render or image-region refresh, an APEX BLOB item can call
    `CB_CONVERSATION.get_current_image_blob(:PXX_CHATBOT_ID)`. The function
    uses the latest assistant-message embedding and cosine shorthand (`<=>`) to
    select the closest `CB_CHATBOT_IMAGES` definition for that chatbot.
    Missing embeddings, no matching image, and lookup errors fall back to
    `CB_CHATBOTS.IMAGE`.
 
-`CB_AGENT.get_text_response` does not insert the assistant reply. Neither it nor
-`CB_CONVERSATION.submit_turn` commits; transaction boundaries belong to the caller.
+`CB_AGENT.get_text_response` does not insert the assistant reply. Neither it,
+`CB_AGENT.populate_latest_image_definition`, nor `CB_CONVERSATION.submit_turn`
+commits; transaction boundaries belong to the caller.
 
 Chat responses are expected to fit in `CB_CHATBOT_CONVERSATIONS.MESSAGE`, which
 is `VARCHAR2(8000 CHAR)`. `CB_AGENT.get_text_response` logs and raises an error
@@ -135,8 +141,8 @@ boundaries.
 | Topic | Decision |
 | --- | --- |
 | Scope | Multiple chatbot proof of concept with one conversation thread per bot. |
-| Caller | APEX or another caller invokes `CB_CONVERSATION.submit_turn` to save a user question and its response. |
-| Chat persistence | `CB_AGENT.get_text_response` only returns the model response; `CB_CONVERSATION.submit_turn` inserts user and assistant messages. |
+| Caller | APEX or another caller invokes `CB_CONVERSATION.submit_turn` to save a user question and its response, then asynchronously invokes `CB_AGENT.populate_latest_image_definition` for image metadata. |
+| Chat persistence | `CB_AGENT.get_text_response` only returns the model response; `CB_CONVERSATION.submit_turn` inserts user and assistant messages without image metadata. |
 | Conversation ordering | `ID` order is good enough for the POC. |
 | Users | Multiple users are out of scope for Phase 1. |
 | Providers | Calls can route through Claude or OpenAI-compatible providers such as Novita. |
@@ -147,7 +153,7 @@ boundaries.
 | Message vectorization | Every message role is vectorized, including user and assistant rows. |
 | Embedding failures | Embedding failures are logged to `CB_LOGS` and do not block conversation message DML. |
 | Update behavior | Updating a message updates its vector through the trigger. It does not call the LLM or create another assistant response. |
-| Assistant persistence | `CB_CONVERSATION.submit_turn` inserts the assistant message after `CB_AGENT.get_text_response`. |
+| Assistant persistence | `CB_CONVERSATION.submit_turn` inserts the assistant message after `CB_AGENT.get_text_response`; `CB_AGENT.populate_latest_image_definition` later updates the latest assistant row's image metadata. |
 | Archive behavior | `CB_CONVERSATION.archive_chat` snapshots the whole transcript as JSON in `CB_CHATBOT_ARCHIVES`; it does not delete messages or clear the running summary. |
 | Clear behavior | `CB_CONVERSATION.clear_conversation` separately deletes live messages and clears `CURRENT_SUMMARY`; it does not archive first. |
 | Chatbot image display | `CB_CONVERSATION.get_current_image_blob` compares the latest assistant embedding to same-chatbot image-definition embeddings with cosine shorthand (`<=>`). It returns `CB_CHATBOTS.IMAGE` when no semantic image can be returned. |

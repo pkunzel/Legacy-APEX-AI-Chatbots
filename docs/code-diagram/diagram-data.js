@@ -107,7 +107,7 @@ window.CODE_DIAGRAM_DATA = {
     {
       id: "sequence",
       label: "Chat request sequence",
-      description: "A deterministic view of CB_CONVERSATION.submit_turn for a saved user message.",
+      description: "A view of synchronous reply submission followed by asynchronous image-metadata enrichment.",
       canvas: { width: 1400, height: 760 },
       nodes: [
         { id: "s-caller", label: "APEX / caller", category: "external", summary: "Calls submit_turn and owns commit/rollback.", files: [], x: 30, y: 90, width: 170, height: 76 },
@@ -121,9 +121,9 @@ window.CODE_DIAGRAM_DATA = {
         { id: "s-provider", label: "Provider subtype", category: "provider", summary: "Polymorphic CB_PROVIDER_T dispatch selects OpenAI-compatible or Claude behavior.", files: [{ label: "type", href: "../../database%20objects/types/cb_provider_t.sql" }], x: 510, y: 300, width: 190, height: 92 },
         { id: "s-adapter", label: "Provider adapter", category: "provider", summary: "Builds a provider payload, performs HTTP, and parses assistant text.", files: [{ label: "OpenAI adapter", href: "../../database%20objects/package%20bodies/cb_adapter_openai.plb" }, { label: "Claude adapter", href: "../../database%20objects/package%20bodies/cb_adapter_claude.plb" }], x: 750, y: 300, width: 190, height: 92 },
         { id: "s-llm", label: "LLM endpoint", category: "external", summary: "External provider returns generated text.", files: [], x: 990, y: 300, width: 170, height: 92 },
-        { id: "s-assistant", label: "Persist assistant row", category: "table", summary: "CB_CONVERSATION inserts the response and image search term; the trigger embeds it.", files: [{ label: "body", href: "../../database%20objects/package%20bodies/cb_conversation.plb" }], x: 1210, y: 300, width: 170, height: 92 },
-        { id: "s-image", label: "Semantic image lookup", category: "orchestration", summary: "The latest assistant embedding selects a same-chatbot image; CB_CHATBOTS.IMAGE is the fallback.", files: [{ label: "body", href: "../../database%20objects/package%20bodies/cb_conversation.plb" }], x: 270, y: 520, width: 210, height: 92 },
-        { id: "s-result", label: "Return to caller", category: "external", summary: "Caller refreshes the page and may request the current image BLOB. No package commits.", files: [], x: 650, y: 520, width: 210, height: 92 },
+        { id: "s-assistant", label: "Persist assistant row", category: "table", summary: "CB_CONVERSATION inserts the response immediately; image-search metadata remains empty initially.", files: [{ label: "body", href: "../../database%20objects/package%20bodies/cb_conversation.plb" }], x: 1210, y: 300, width: 170, height: 92 },
+        { id: "s-image", label: "Async image enrichment", category: "orchestration", summary: "A later Ajax call invokes CB_AGENT to derive and embed image-search metadata for the latest assistant message.", files: [{ label: "body", href: "../../database%20objects/package%20bodies/cb_agent.plb" }], x: 270, y: 520, width: 210, height: 92 },
+        { id: "s-result", label: "Return to caller", category: "external", summary: "Caller refreshes page assets immediately, then refreshes the image region after the Ajax enrichment completes. No package commits.", files: [], x: 650, y: 520, width: 210, height: 92 },
         { id: "s-failure", label: "Non-blocking error path", category: "table", summary: "CB_LOGS receives embedding or lookup errors; oversized chat responses are logged and raised.", files: [{ label: "DDL", href: "../../database%20objects/tables/cb_logs.sql" }], x: 1030, y: 520, width: 210, height: 92 }
       ],
       edges: [
@@ -138,11 +138,11 @@ window.CODE_DIAGRAM_DATA = {
         { from: "s-provider", to: "s-adapter", label: "dispatch", kind: "sequence", sequence: 9 },
         { from: "s-adapter", to: "s-llm", label: "HTTP", kind: "sequence", sequence: 10 },
         { from: "s-llm", to: "s-assistant", label: "assistant text", kind: "sequence", sequence: 11 },
-        { from: "s-assistant", to: "s-image", label: "latest embedding", kind: "sequence", sequence: 12 },
-        { from: "s-image", to: "s-result", label: "BLOB / fallback", kind: "sequence", sequence: 13 },
+        { from: "s-assistant", to: "s-image", label: "separate Ajax call", kind: "sequence", sequence: 12 },
+        { from: "s-image", to: "s-result", label: "refresh image", kind: "sequence", sequence: 13 },
         { from: "s-memory", to: "s-failure", label: "log and continue", kind: "error" },
         { from: "s-agent", to: "s-failure", label: "oversize / lookup", kind: "error" },
-        { from: "s-image", to: "s-failure", label: "lookup error", kind: "error" }
+        { from: "s-image", to: "s-failure", label: "enrichment error", kind: "error" }
       ]
     }
   ]

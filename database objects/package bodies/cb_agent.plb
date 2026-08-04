@@ -554,94 +554,142 @@ create or replace package body cb_agent as
    end get_text_response;
 
    /**
-    * @function get_image_definition
-    * @description Uses the chatbot image-definition prompt and configured image
-    *              model to derive a concise image-search term from an assistant response.
+    * @procedure populate_latest_image_definition
+    * @description Enriches the latest assistant message with an image-search
+    *              term and its embedding when that metadata is incomplete.
     */
-   function get_image_definition (
-      p_bot_id             in cb_chatbots.id%type,
-      p_assistant_response in cb_chatbot_conversations.message%type
-   ) return cb_chatbot_conversations.image_search_term%type is
-      l_image_model_id         cb_chatbots.image_llm_model_id%type;
+   procedure populate_latest_image_definition (
+      p_bot_id in cb_chatbots.id%type
+   ) is
+      l_assistant_message_id    cb_chatbot_conversations.id%type;
+      l_assistant_response      cb_chatbot_conversations.message%type;
+      l_image_search_term       cb_chatbot_conversations.image_search_term%type;
+      l_metadata_complete       varchar2(1);
+      l_image_model_id          cb_chatbots.image_llm_model_id%type;
       l_image_definition_prompt cb_chatbots.image_definition_prompt%type;
-      l_config                 t_ai_model_config;
-      l_signature_type         varchar2(30);
-      l_provider               cb_provider_t;
-      l_response               clob;
-      l_response_sample        varchar2(32767);
-      l_response_length        number;
-      l_effective_max_tokens   number;
-      l_failure_reason         varchar2(100);
-      l_error_details          clob;
+      l_config                  t_ai_model_config;
+      l_signature_type          varchar2(30);
+      l_provider                cb_provider_t;
+      l_response                clob;
+      l_response_sample         varchar2(32767);
+      l_response_length         number;
+      l_effective_max_tokens    number;
+      l_failure_reason          varchar2(100);
+      l_error_details           clob;
    begin
-      if p_assistant_response is null
-      or not regexp_like(p_assistant_response, '[^[:space:]]') then
-         return null;
+      begin
+         select id,
+                message,
+                image_search_term,
+                case
+                   when image_search_term is not null
+                    and image_search_term_embedding is not null then 'Y'
+                   else 'N'
+                end
+           into l_assistant_message_id,
+                l_assistant_response,
+                l_image_search_term,
+                l_metadata_complete
+           from (
+              select id,
+                     message,
+                     image_search_term,
+                     image_search_term_embedding
+                from cb_chatbot_conversations
+               where chatbot_id = p_bot_id
+                 and lower(role) = 'assistant'
+               order by id desc
+           )
+          where rownum = 1;
+      exception
+         when no_data_found then
+            return;
+      end;
+
+      if l_metadata_complete = 'Y' then
+         return;
       end if;
 
-      select image_llm_model_id,
-             image_definition_prompt
-        into l_image_model_id,
-             l_image_definition_prompt
-        from cb_chatbots
-       where id = p_bot_id;
-
-      if l_image_definition_prompt is null
-      or not regexp_like(
-         dbms_lob.substr(l_image_definition_prompt, 32767, 1),
-         '[^[:space:]]'
-      ) then
-         raise_application_error(-20001, 'Image definition prompt cannot be null');
+      if l_assistant_response is null
+      or not regexp_like(l_assistant_response, '[^[:space:]]') then
+         return;
       end if;
 
-      l_config := get_ai_model_config(l_image_model_id);
-      l_signature_type := normalize_signature_type(l_config.signature_type);
-      l_effective_max_tokens := nvl(
-         l_config.max_tokens,
-         default_max_tokens(l_signature_type)
-      );
+      if l_image_search_term is null then
+         select image_llm_model_id,
+                image_definition_prompt
+           into l_image_model_id,
+                l_image_definition_prompt
+           from cb_chatbots
+          where id = p_bot_id;
 
-      l_provider := create_provider(
-         p_signature_type => l_signature_type,
-         p_url            => l_config.url,
-         p_api_key        => get_header_api_key(
-                               p_signature_type => l_signature_type,
-                               p_api_key        => l_config.api_key
-                            ),
-         p_model          => l_config.model,
-         p_max_tokens     => l_effective_max_tokens
-      );
+         if l_image_definition_prompt is null
+         or not regexp_like(
+            dbms_lob.substr(l_image_definition_prompt, 32767, 1),
+            '[^[:space:]]'
+         ) then
+            raise_application_error(-20001, 'Image definition prompt cannot be null');
+         end if;
 
-      l_response := l_provider.get_text_response(
-         p_system_context   => cb_agent_util.build_system_context(
-                                  p_instructions => l_image_definition_prompt
-                               ),
-         p_history_messages => null,
-         p_user_message     => p_assistant_response
-      );
-
-      l_response_sample := lower(dbms_lob.substr(l_response, 32767, 1));
-      l_response_length := dbms_lob.getlength(l_response);
-
-      if l_response_sample is null
-      or not regexp_like(l_response_sample, '[^[:space:]]') then
-         l_failure_reason := 'blank provider response';
-      elsif l_response_sample like 'error%' then
-         l_failure_reason := 'provider response begins with "error"';
-      elsif l_response_sample like 'http request failed%' then
-         l_failure_reason := 'provider HTTP request failed';
-      elsif l_response_sample like 'no response received%' then
-         l_failure_reason := 'provider returned no response';
-      end if;
-
-      if l_failure_reason is not null then
-         raise_application_error(
-            -20001,
-            'Image definition generation failed: ' || l_failure_reason
+         l_config := get_ai_model_config(l_image_model_id);
+         l_signature_type := normalize_signature_type(l_config.signature_type);
+         l_effective_max_tokens := nvl(
+            l_config.max_tokens,
+            default_max_tokens(l_signature_type)
          );
+
+         l_provider := create_provider(
+            p_signature_type => l_signature_type,
+            p_url            => l_config.url,
+            p_api_key        => get_header_api_key(
+                                  p_signature_type => l_signature_type,
+                                  p_api_key        => l_config.api_key
+                               ),
+            p_model          => l_config.model,
+            p_max_tokens     => l_effective_max_tokens
+         );
+
+         l_response := l_provider.get_text_response(
+            p_system_context   => cb_agent_util.build_system_context(
+                                     p_instructions => l_image_definition_prompt
+                                  ),
+            p_history_messages => null,
+            p_user_message     => l_assistant_response
+         );
+
+         l_response_sample := lower(dbms_lob.substr(l_response, 32767, 1));
+         l_response_length := dbms_lob.getlength(l_response);
+
+         if l_response_sample is null
+         or not regexp_like(l_response_sample, '[^[:space:]]') then
+            l_failure_reason := 'blank provider response';
+         elsif l_response_sample like 'error%' then
+            l_failure_reason := 'provider response begins with "error"';
+         elsif l_response_sample like 'http request failed%' then
+            l_failure_reason := 'provider HTTP request failed';
+         elsif l_response_sample like 'no response received%' then
+            l_failure_reason := 'provider returned no response';
+         end if;
+
+         if l_failure_reason is not null then
+            raise_application_error(
+               -20001,
+               'Image definition generation failed: ' || l_failure_reason
+            );
+         end if;
+
+         l_image_search_term := dbms_lob.substr(l_response, 300, 1);
       end if;
 
-      return dbms_lob.substr(l_response, 300, 1);
+      update cb_chatbot_conversations
+         set image_search_term = l_image_search_term,
+             image_search_term_embedding = cb_memory.embed_message(
+                p_message    => l_image_search_term,
+                p_chatbot_id => p_bot_id
+             )
+       where id = l_assistant_message_id
+         and chatbot_id = p_bot_id
+         and lower(role) = 'assistant';
    exception
       when others then
          l_error_details :=
@@ -651,7 +699,7 @@ create or replace package body cb_agent as
             || chr(10) || 'signature_type=' || nvl(l_signature_type, '<null>')
             || chr(10) || 'model=' || nvl(l_config.model, '<null>')
             || chr(10) || 'max_tokens=' || nvl(to_char(l_effective_max_tokens), '<null>')
-            || chr(10) || 'assistant_response_length=' || nvl(to_char(length(p_assistant_response)), '<null>')
+            || chr(10) || 'assistant_response_length=' || nvl(to_char(length(l_assistant_response)), '<null>')
             || chr(10) || 'response_length=' || nvl(to_char(l_response_length), '<null>')
             || chr(10) || 'response_sample=' || nvl(
                replace(
@@ -665,7 +713,7 @@ create or replace package body cb_agent as
             || chr(10) || 'error_backtrace=' || dbms_utility.format_error_backtrace;
 
          apex_debug.error(
-            'Unexpected error in cb_agent.get_image_definition: '
+            'Unexpected error in cb_agent.populate_latest_image_definition: '
             || dbms_lob.substr(l_error_details, 32767, 1)
          );
 
@@ -677,7 +725,7 @@ create or replace package body cb_agent as
             ) values (
                p_bot_id,
                l_error_details,
-               'cb_agent.get_image_definition'
+               'cb_agent.populate_latest_image_definition'
             );
          exception
             when others then
@@ -686,9 +734,7 @@ create or replace package body cb_agent as
                   || dbms_utility.format_error_stack
                );
          end;
-
-         return null;
-   end get_image_definition;
+   end populate_latest_image_definition;
 
    /**
     * @procedure create_summary

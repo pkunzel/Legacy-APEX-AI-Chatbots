@@ -27,8 +27,10 @@ APEX is expected to own:
 - Chat page model selection.
 - Chat page call to `CB_CONVERSATION.submit_turn` for a new user message or an
   additional response for the latest user message.
+- Separate Ajax call to `CB_AGENT.populate_latest_image_definition` after the
+  assistant response is saved.
 - BLOB image item query using `CB_CONVERSATION.get_current_image_blob` after a
-  chat response is saved.
+  chat response's image metadata is available.
 - Summary button or process calling `CB_AGENT.create_summary`.
 - Screen refresh and error display.
 

@@ -68,18 +68,16 @@ create or replace package cb_agent as
    ) return clob;
 
    /**
-    * @function get_image_definition
+    * @procedure populate_latest_image_definition
     * @description Uses the chatbot image-definition prompt and configured image
-    *              model to derive a concise image-search term from an assistant
-    *              response. Failures are logged and returned as null.
+    *              model to enrich the latest assistant message with an
+    *              image-search term and its embedding. Calls that find no
+    *              assistant message or an already-enriched message do nothing.
     * @param p_bot_id Chatbot identifier from cb_chatbots.
-    * @param p_assistant_response Assistant response from which to derive the term.
-    * @returns Image-search term, or null when the input is blank or generation fails.
     */
-   function get_image_definition (
-      p_bot_id             in cb_chatbots.id%type,
-      p_assistant_response in cb_chatbot_conversations.message%type
-   ) return cb_chatbot_conversations.image_search_term%type;
+   procedure populate_latest_image_definition (
+      p_bot_id in cb_chatbots.id%type
+   );
 
    /**
     * @procedure create_summary

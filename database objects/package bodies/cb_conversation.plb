@@ -4,7 +4,7 @@
  *              archiving, and clearing actions.
  * @module cb_conversation
  * @dependencies cb_agent, cb_chatbots, cb_chatbot_conversations,
- *               cb_chatbot_archives, cb_chatbot_images, cb_logs, cb_memory,
+ *               cb_chatbot_archives, cb_chatbot_images, cb_logs,
  *               APEX_DEBUG, DBMS_LOB,
  *               DBMS_UTILITY
  * @notes The package does not commit. The caller controls transaction boundaries.
@@ -124,7 +124,6 @@ create or replace package body cb_conversation as
    ) is
       l_reply             clob;
       l_assistant_message cb_chatbot_conversations.message%type;
-      l_image_search_term cb_chatbot_conversations.image_search_term%type;
    begin
       l_reply := cb_agent.get_text_response(
          p_model_id             => p_model_id,
@@ -135,26 +134,15 @@ create or replace package body cb_conversation as
       );
 
       l_assistant_message := dbms_lob.substr(l_reply, 8000, 1);
-      l_image_search_term := cb_agent.get_image_definition(
-         p_bot_id             => p_chatbot_id,
-         p_assistant_response => l_assistant_message
-      );
 
       insert into cb_chatbot_conversations (
          chatbot_id,
          role,
-         message,
-         image_search_term,
-         image_search_term_embedding
+         message
       ) values (
          p_chatbot_id,
          'assistant',
-         l_assistant_message,
-         l_image_search_term,
-         cb_memory.embed_message(
-            p_message    => l_image_search_term,
-            p_chatbot_id => p_chatbot_id
-         )
+         l_assistant_message
       );
    end generate_and_store_reply;
 
