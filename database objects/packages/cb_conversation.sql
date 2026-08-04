@@ -25,7 +25,7 @@ create or replace package cb_conversation as
       p_model_id             in cb_ai_models.id%type,
       p_chatbot_id           in cb_chatbots.id%type,
       p_user_message         in cb_chatbot_conversations.message%type default null,
-      p_recall_message_count in number default 20,
+      p_recall_message_count in number default 14,
       p_max_tokens           in number default null
    );
 
