@@ -42,8 +42,9 @@ when generating future replies.
   as an assistant message.
 - A caller can use `CB_AGENT.create_summary` to summarize older unsummarized
   messages into `CB_CHATBOTS.CURRENT_SUMMARY` and mark included rows summarized.
-- A caller can archive a complete live transcript into one
-  `CB_CHATBOT_ARCHIVES` row without changing the live conversation.
+- A caller can archive a complete live transcript, running summary, and summary
+  prompt into one `CB_CHATBOT_ARCHIVES` row without changing the live
+  conversation.
 - An APEX BLOB item can display the image semantically closest to the latest
   assistant response, with `CB_CHATBOTS.IMAGE` as its fallback.
 
@@ -154,7 +155,7 @@ boundaries.
 | Embedding failures | Embedding failures are logged to `CB_LOGS` and do not block conversation message DML. |
 | Update behavior | Updating a message updates its vector through the trigger. It does not call the LLM or create another assistant response. |
 | Assistant persistence | `CB_CONVERSATION.submit_turn` inserts the assistant message after `CB_AGENT.get_text_response`; `CB_AGENT.populate_latest_image_definition` later updates the latest assistant row's image metadata. |
-| Archive behavior | `CB_CONVERSATION.archive_chat` snapshots the whole transcript as JSON in `CB_CHATBOT_ARCHIVES`; it does not delete messages or clear the running summary. |
+| Archive behavior | `CB_CONVERSATION.archive_chat` snapshots the whole transcript as JSON plus the chatbot metadata, running summary, and summary prompt in `CB_CHATBOT_ARCHIVES`; it does not delete messages or clear the running summary. |
 | Clear behavior | `CB_CONVERSATION.clear_conversation` separately deletes live messages and clears `CURRENT_SUMMARY`; it does not archive first. |
 | Chatbot image display | `CB_CONVERSATION.get_current_image_blob` compares the latest assistant embedding to same-chatbot image-definition embeddings with cosine shorthand (`<=>`). It returns `CB_CHATBOTS.IMAGE` when no semantic image can be returned. |
 | Conversation memory input | Memory recall uses the saved/current message embedding provided through `p_current_message_id`. |

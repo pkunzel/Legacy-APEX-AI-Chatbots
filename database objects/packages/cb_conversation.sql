@@ -42,7 +42,8 @@ create or replace package cb_conversation as
 
    /**
     * @procedure archive_chat
-    * @description Saves the complete live conversation as one archive row.
+    * @description Saves the complete live conversation, chatbot metadata,
+    *              running summary, and summary prompt as one archive row.
     *              It does not change live messages or the running summary.
     * @param p_id_chat_bot Chatbot identifier from cb_chatbots.
     */

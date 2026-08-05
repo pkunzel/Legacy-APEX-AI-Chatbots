@@ -52,7 +52,7 @@ Key objects:
 | `CB_CHATBOT_IMAGES` | Stores chatbot-owned images, image definitions, and definition embeddings for searchable product context. |
 | `CB_AI_MODELS` | Stores provider URL, API key, model name, signature type, and optional default token limit. |
 | `CB_CHATBOT_CONVERSATIONS` | Stores conversation messages, role, embedding, summary flag, and timestamps. |
-| `CB_CHATBOT_ARCHIVES` | Stores complete transcript snapshots as JSON, with chatbot prompt and name snapshots. |
+| `CB_CHATBOT_ARCHIVES` | Stores complete transcript snapshots as JSON, with chatbot prompt, name, running-summary, and summary-prompt snapshots. |
 | `CB_PROVIDER_T` | Abstract provider contract used for polymorphic dispatch. |
 | `CB_OPENAI_PROVIDER_T` | Concrete OpenAI-compatible provider subtype. |
 | `CB_CLAUDE_PROVIDER_T` | Concrete Anthropic/Claude provider subtype. |

@@ -255,22 +255,29 @@ create or replace package body cb_conversation as
 
    /**
     * @procedure archive_chat
-    * @description Captures the live conversation and chatbot metadata in one archive row.
+    * @description Captures the live conversation, chatbot metadata, running
+    *              summary, and summary prompt in one archive row.
     */
    procedure archive_chat (
       p_id_chat_bot in number
    ) is
-      l_messages      clob;
-      l_system_prompt cb_chatbots.prompt%type;
-      l_bot_name      cb_chatbots.name%type;
+      l_messages       clob;
+      l_system_prompt  cb_chatbots.prompt%type;
+      l_last_summary   cb_chatbots.current_summary%type;
+      l_summary_prompt cb_chatbots.summary_prompt%type;
+      l_bot_name       cb_chatbots.name%type;
    begin
       if p_id_chat_bot is null then
          raise_application_error(-20001, 'Chatbot ID cannot be null');
       end if;
 
       select prompt,
+             current_summary,
+             summary_prompt,
              name
         into l_system_prompt,
+             l_last_summary,
+             l_summary_prompt,
              l_bot_name
         from cb_chatbots
        where id = p_id_chat_bot;
@@ -299,11 +306,15 @@ create or replace package body cb_conversation as
          chatbot_id,
          messages,
          system_prompt,
+         last_summary,
+         summary_prompt,
          bot_name
       ) values (
          p_id_chat_bot,
          l_messages,
          l_system_prompt,
+         l_last_summary,
+         l_summary_prompt,
          l_bot_name
       );
    exception

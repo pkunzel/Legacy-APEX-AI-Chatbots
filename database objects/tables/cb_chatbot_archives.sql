@@ -14,9 +14,15 @@ create table "CB_CHATBOT_ARCHIVES" (
    "SYSTEM_PROMPT" clob
       annotations ( "DESCRIPTION" 'Snapshot of the chatbot system prompt at archive time.'
       ,"DISPLAY" 'System Prompt' ),
+   "LAST_SUMMARY" clob
+      annotations ( "DESCRIPTION" 'Snapshot of the chatbot running summary at archive time.'
+      ,"DISPLAY" 'Last Summary' ),
+   "SUMMARY_PROMPT" clob
+      annotations ( "DESCRIPTION" 'Snapshot of the chatbot summary prompt at archive time.'
+      ,"DISPLAY" 'Summary Prompt' ),
    "BOT_NAME"      varchar2(4000 char)
       annotations ( "DESCRIPTION" 'Snapshot of the chatbot name at archive time.'
       ,"DISPLAY" 'Bot Name' ),
    constraint "CB_CHATBOT_ARCHIVES_ID_PK" primary key ( "ID" )
       using index enable
-) annotations ( "DESCRIPTION" 'Stores one complete archived conversation per row, with chatbot metadata snapshots.',"DISPLAY" 'Chatbot Archives' );
+) annotations ( "DESCRIPTION" 'Stores one complete archived conversation per row, with chatbot metadata and summary snapshots.',"DISPLAY" 'Chatbot Archives' );
